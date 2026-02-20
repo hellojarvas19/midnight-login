@@ -256,11 +256,11 @@ const CheckerPage = () => {
         style={{ animationDelay: "0ms", animationFillMode: "both" }}
       >
         <h1
-          className="text-5xl font-black tracking-tight text-glow"
+          className="text-5xl font-black text-glow"
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "'Courier New', Courier, monospace",
             color: "hsl(var(--primary))",
-            letterSpacing: "-0.03em",
+            letterSpacing: "0.04em",
           }}
         >
           Checker
