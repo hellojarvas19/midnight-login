@@ -224,3 +224,14 @@ All colors MUST be HSL.
   .animate-wave { animation: wave-shift 8s ease infinite; }
 }
 
+/* ─── Checkmark draw animation ─── */
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 22;
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
