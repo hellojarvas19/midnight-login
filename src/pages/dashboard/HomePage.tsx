@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, BarChart2, Clock, Search, ShieldCheck, Zap } from "lucide-react";
+import { Activity, BarChart2, CheckCircle, CreditCard, ShieldCheck, Zap } from "lucide-react";
 
 /* ─── Animated counter hook ─── */
 function useCountUp(target: number, duration = 1400, delay = 0) {
@@ -12,7 +12,6 @@ function useCountUp(target: number, duration = 1400, delay = 0) {
       const tick = (now: number) => {
         const elapsed = now - start;
         const progress = Math.min(elapsed / duration, 1);
-        // ease-out cubic
         const eased = 1 - Math.pow(1 - progress, 3);
         setValue(Math.round(eased * target));
         if (progress < 1) rafRef.current = requestAnimationFrame(tick);
@@ -47,18 +46,18 @@ const StatCard = ({
 
   return (
     <div
-      className="glass-card animate-card-entrance rounded-2xl p-5 flex flex-col gap-3"
+      className="glass-card animate-card-entrance rounded-2xl p-4 flex flex-col gap-3"
       style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
     >
       <div className="flex items-center justify-between">
         <span
-          className="text-xs font-semibold uppercase tracking-wider"
+          className="text-xs font-semibold uppercase tracking-wider leading-tight"
           style={{ color: "hsl(var(--muted-foreground))" }}
         >
           {label}
         </span>
         <div
-          className="rounded-lg p-1.5"
+          className="rounded-lg p-1.5 shrink-0"
           style={{ background: "hsla(315, 80%, 45%, 0.18)" }}
         >
           <Icon
@@ -89,8 +88,7 @@ const StatCard = ({
           className="h-full rounded-full transition-all duration-[1600ms] ease-out"
           style={{
             width: `${Math.min((count / target) * 100, 100)}%`,
-            background:
-              "linear-gradient(90deg, hsl(315,95%,45%), hsl(315,90%,65%))",
+            background: "linear-gradient(90deg, hsl(315,95%,45%), hsl(315,90%,65%))",
             boxShadow: "0 0 8px hsla(315,90%,55%,0.6)",
           }}
         />
@@ -105,30 +103,30 @@ type ActivityEntry = {
   icon: typeof Activity;
   iconBg: string;
   label: string;
-  address: string;
+  card: string;
   timestamp: Date;
 };
 
 const SEED_ACTIVITIES: Omit<ActivityEntry, "id">[] = [
   {
-    icon: ShieldCheck,
+    icon: CheckCircle,
     iconBg: "hsla(315,80%,45%,0.18)",
-    label: "Check completed",
-    address: "0x71C7...3Ec1",
+    label: "Card approved",
+    card: "•••• 4242",
     timestamp: new Date(Date.now() - 1000 * 60 * 2),
   },
   {
-    icon: Search,
+    icon: CreditCard,
     iconBg: "hsla(315,60%,40%,0.14)",
-    label: "Address scanned",
-    address: "0xd8dA...6045",
+    label: "Batch processed",
+    card: "•••• 1337",
     timestamp: new Date(Date.now() - 1000 * 60 * 8),
   },
   {
-    icon: Zap,
+    icon: ShieldCheck,
     iconBg: "hsla(315,70%,42%,0.16)",
-    label: "Quick lookup",
-    address: "0xAbCd...1234",
+    label: "Card checked",
+    card: "•••• 9981",
     timestamp: new Date(Date.now() - 1000 * 60 * 21),
   },
 ];
@@ -142,10 +140,11 @@ function timeAgo(date: Date) {
 }
 
 const LIVE_EVENTS = [
-  { label: "New check run", address: "0x3fC9...A4b2" },
-  { label: "Address flagged", address: "0xBe12...99FF" },
-  { label: "Contract scanned", address: "0x1A2B...C3D4" },
-  { label: "Wallet analysed", address: "0xFf00...1234" },
+  { label: "Card approved", card: "•••• 4242" },
+  { label: "Card declined", card: "•••• 1234" },
+  { label: "Mass run completed", card: "•••• 8800" },
+  { label: "Batch processed", card: "•••• 5566" },
+  { label: "Card checked", card: "•••• 3391" },
 ];
 
 const ActivityFeed = () => {
@@ -154,19 +153,17 @@ const ActivityFeed = () => {
   );
   const counterRef = useRef(SEED_ACTIVITIES.length);
 
-  /* Simulate a new event every 5-9 seconds */
   useEffect(() => {
     const schedule = () => {
       const delay = 5000 + Math.random() * 4000;
       return setTimeout(() => {
-        const template =
-          LIVE_EVENTS[Math.floor(Math.random() * LIVE_EVENTS.length)];
+        const template = LIVE_EVENTS[Math.floor(Math.random() * LIVE_EVENTS.length)];
         const newEntry: ActivityEntry = {
           id: counterRef.current++,
-          icon: ShieldCheck,
+          icon: CheckCircle,
           iconBg: "hsla(315,80%,45%,0.18)",
           label: template.label,
-          address: template.address,
+          card: template.card,
           timestamp: new Date(),
         };
         setEntries((prev) => [newEntry, ...prev].slice(0, 8));
@@ -205,23 +202,14 @@ const ActivityFeed = () => {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p
-                className="text-sm font-medium truncate"
-                style={{ color: "hsl(var(--foreground))" }}
-              >
+              <p className="text-sm font-medium truncate" style={{ color: "hsl(var(--foreground))" }}>
                 {entry.label}
               </p>
-              <p
-                className="text-xs font-mono truncate"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                {entry.address}
+              <p className="text-xs font-mono truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
+                {entry.card}
               </p>
             </div>
-            <span
-              className="text-xs shrink-0 tabular-nums"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            >
+            <span className="text-xs shrink-0 tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>
               {timeAgo(entry.timestamp)}
             </span>
           </div>
@@ -249,28 +237,34 @@ const LiveDot = () => (
 const HomePage = () => {
   return (
     <div className="flex flex-col gap-6">
-      {/* Welcome header */}
+      {/* Welcome header — matches Checker page style */}
       <div
         className="animate-card-entrance"
         style={{ animationDelay: "0ms", animationFillMode: "both" }}
       >
+        <p className="text-sm font-medium mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+          Welcome back,
+        </p>
         <h1
-          className="text-3xl font-extrabold tracking-tight text-glow"
-          style={{ color: "hsl(var(--foreground))" }}
+          className="text-4xl font-black tracking-tight leading-none"
+          style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            color: "hsl(var(--primary))",
+            textShadow: "0 0 30px hsla(315,90%,60%,0.45), 0 0 60px hsla(315,90%,50%,0.2)",
+          }}
         >
-          Welcome back,{" "}
-          <span style={{ color: "hsl(var(--primary))" }}>0xAdam</span>
+          0xAdam
         </h1>
-        <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+        <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           Here's a live snapshot of your checker activity.
         </p>
       </div>
 
-      {/* Stat cards with animated counters */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Stat cards — 2 cols mobile, 3 cols desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <StatCard label="Total Checks" target={1284} icon={BarChart2} delay={60} />
-        <StatCard label="Active Sessions" target={3} suffix="" icon={Zap} delay={120} />
-        <StatCard label="Addresses Scanned" target={847} icon={ShieldCheck} delay={180} />
+        <StatCard label="Approved Today" target={3} icon={CheckCircle} delay={120} />
+        <StatCard label="Cards Scanned" target={847} icon={CreditCard} delay={180} />
       </div>
 
       {/* Live activity feed */}
@@ -287,15 +281,11 @@ const HomePage = () => {
           </h2>
           <div className="flex items-center gap-2">
             <LiveDot />
-            <span
-              className="text-xs font-medium"
-              style={{ color: "hsl(var(--primary))" }}
-            >
+            <span className="text-xs font-medium" style={{ color: "hsl(var(--primary))" }}>
               Live
             </span>
           </div>
         </div>
-
         <ActivityFeed />
       </div>
     </div>
