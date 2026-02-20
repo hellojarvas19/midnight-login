@@ -291,7 +291,7 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
               {!collapsed && (
                 <span className="flex items-center gap-2" style={{ whiteSpace: "nowrap", overflow: "hidden" }}>
                   {label}
-                  {id === "profile" && (
+                  {id === "profile" && active !== "profile" && (
                     <span
                       style={{
                         width: 7,
