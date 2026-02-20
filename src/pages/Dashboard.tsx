@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Menu, ChevronRight } from "lucide-react";
+import { Menu, ChevronRight, Home, CreditCard, Crown } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import HomePage from "@/pages/dashboard/HomePage";
@@ -14,6 +14,12 @@ const SECTION_TITLE: Record<Section, string> = {
   home:    "Home",
   checker: "Checker",
   profile: "Profile",
+};
+
+const SECTION_ICON: Record<Section, typeof Home> = {
+  home:    Home,
+  checker: CreditCard,
+  profile: Crown,
 };
 
 const SWIPE_THRESHOLD = 60; // px leftward to trigger close
@@ -171,24 +177,36 @@ const Dashboard = () => {
             {/* Separator */}
             <ChevronRight
               size={12}
-              style={{
-                color: "hsl(var(--muted-foreground))",
-                opacity: 0.4,
-                flexShrink: 0,
-              }}
+              style={{ color: "hsl(var(--muted-foreground))", opacity: 0.4, flexShrink: 0 }}
             />
 
             {/* Active section — re-mounts on every navigation to trigger animation */}
-            <span
-              key={pageKey}
-              className="text-xs font-bold tracking-widest uppercase"
-              style={{
-                color: "hsl(var(--foreground))",
-                animation: "breadcrumb-slide-in 0.28s cubic-bezier(0.22,1,0.36,1) both",
-              }}
-            >
-              {SECTION_TITLE[active]}
-            </span>
+            {(() => {
+              const SectionIcon = SECTION_ICON[active];
+              const isProfile = active === "profile";
+              return (
+                <span
+                  key={pageKey}
+                  className="flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase"
+                  style={{
+                    color: isProfile ? "hsl(48,100%,68%)" : "hsl(var(--foreground))",
+                    animation: "breadcrumb-slide-in 0.28s cubic-bezier(0.22,1,0.36,1) both",
+                  }}
+                >
+                  <SectionIcon
+                    size={13}
+                    style={{
+                      flexShrink: 0,
+                      color: isProfile ? "hsl(48,100%,65%)" : "hsl(var(--primary))",
+                      filter: isProfile
+                        ? "drop-shadow(0 0 4px hsla(44,100%,58%,0.7))"
+                        : "drop-shadow(0 0 4px hsla(315,90%,60%,0.55))",
+                    }}
+                  />
+                  {SECTION_TITLE[active]}
+                </span>
+              );
+            })()}
           </nav>
 
           <div className="flex-1" />
