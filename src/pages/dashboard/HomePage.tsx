@@ -34,12 +34,16 @@ const StatCard = ({
   target,
   suffix = "",
   icon: Icon,
+  emoji,
+  emojiAnimation,
   delay = 0,
 }: {
   label: string;
   target: number;
   suffix?: string;
   icon: typeof Activity;
+  emoji?: string;
+  emojiAnimation?: string;
   delay?: number;
 }) => {
   const count = useCountUp(target, 1600, delay + 300);
@@ -69,9 +73,21 @@ const StatCard = ({
           {label}
         </span>
         <div
-          className="rounded-lg p-1.5 shrink-0"
+          className="rounded-lg p-1.5 shrink-0 flex items-center gap-1"
           style={{ background: "hsla(315, 80%, 45%, 0.18)" }}
         >
+          {emoji && (
+            <span
+              style={{
+                display: "inline-block",
+                fontSize: 13,
+                animation: emojiAnimation,
+                lineHeight: 1,
+              }}
+            >
+              {emoji}
+            </span>
+          )}
           <Icon
             size={14}
             style={{
@@ -274,9 +290,9 @@ const HomePage = () => {
 
       {/* Stat cards — 2 cols mobile, 3 cols desktop */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <StatCard label="Total Checks" target={1284} icon={BarChart2} delay={60} />
-        <StatCard label="Approved Today" target={3} icon={CheckCircle} delay={120} />
-        <StatCard label="Cards Scanned" target={847} icon={CreditCard} delay={180} />
+        <StatCard label="Total Checks"   target={1284} icon={BarChart2}   emoji="📊" emojiAnimation="emoji-bounce 1.6s ease-in-out infinite" delay={60}  />
+        <StatCard label="Approved Today" target={3}    icon={CheckCircle} emoji="✅" emojiAnimation="emoji-spin 2.8s linear infinite"         delay={120} />
+        <StatCard label="Cards Scanned"  target={847}  icon={CreditCard}  emoji="💳" emojiAnimation="emoji-wobble 2s ease-in-out infinite"     delay={180} />
       </div>
 
       {/* Live activity feed */}
