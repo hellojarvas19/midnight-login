@@ -118,35 +118,108 @@ const TelegramButton = ({ text }: { text: string }) => (
   </button>
 );
 
-/* ─── Primary button ─── */
+/* ─── Auth state types ─── */
+type AuthState = "idle" | "loading" | "success";
+
+/* ─── Spinner SVG ─── */
+const Spinner = () => (
+  <svg
+    className="animate-spin"
+    width="18" height="18" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+  >
+    <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+    <path d="M12 2a10 10 0 0 1 10 10" />
+  </svg>
+);
+
+/* ─── Animated checkmark SVG ─── */
+const Checkmark = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"
+  >
+    <path
+      d="M5 13l4 4L19 7"
+      style={{
+        strokeDasharray: 22,
+        strokeDashoffset: 0,
+        animation: "check-draw 0.4s cubic-bezier(0.65,0,0.45,1) forwards",
+      }}
+    />
+  </svg>
+);
+
+/* ─── Primary button with auth state ─── */
 const PrimaryButton = ({
   children,
+  authState,
   onClick,
   type = "button",
 }: {
   children: React.ReactNode;
+  authState: AuthState;
   onClick?: () => void;
   type?: "button" | "submit";
-}) => (
-  <button
-    type={type}
-    onClick={onClick}
-    className="btn-shimmer w-full rounded-xl py-3.5 text-sm font-bold tracking-wide transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] animate-pulse-glow"
-    style={{
-      background: "linear-gradient(135deg, hsl(315,90%,52%), hsl(340,80%,42%))",
-      color: "hsl(var(--primary-foreground))",
-      boxShadow: "0 4px 32px hsla(315,90%,55%,0.45)",
-      border: "1px solid hsla(315,80%,70%,0.2)",
-    }}
-  >
-    {children}
-  </button>
-);
+}) => {
+  const isLoading = authState === "loading";
+  const isSuccess = authState === "success";
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={isLoading || isSuccess}
+      className="btn-shimmer w-full rounded-xl py-3.5 text-sm font-bold tracking-wide transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed relative overflow-hidden"
+      style={{
+        background: isSuccess
+          ? "linear-gradient(135deg, hsl(145,60%,40%), hsl(145,60%,32%))"
+          : "linear-gradient(135deg, hsl(315,90%,52%), hsl(340,80%,42%))",
+        color: "hsl(var(--primary-foreground))",
+        boxShadow: isSuccess
+          ? "0 4px 32px hsla(145,60%,40%,0.5)"
+          : "0 4px 32px hsla(315,90%,55%,0.45)",
+        border: isSuccess
+          ? "1px solid hsla(145,60%,60%,0.25)"
+          : "1px solid hsla(315,80%,70%,0.2)",
+        transition: "background 0.5s ease, box-shadow 0.5s ease",
+      }}
+    >
+      <span
+        className="flex items-center justify-center gap-2.5 transition-all duration-300"
+        style={{ opacity: isLoading ? 0 : 1, transform: isLoading ? "scale(0.8)" : "scale(1)" }}
+      >
+        {isSuccess ? <Checkmark /> : null}
+        {isSuccess ? "Success!" : children}
+      </span>
+
+      {/* Spinner layer */}
+      <span
+        className="absolute inset-0 flex items-center justify-center transition-all duration-300"
+        style={{ opacity: isLoading ? 1 : 0, transform: isLoading ? "scale(1)" : "scale(0.6)" }}
+      >
+        <Spinner />
+      </span>
+    </button>
+  );
+};
+
 
 /* ─── Main auth card ─── */
 const AuthCard = () => {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [transitioning, setTransitioning] = useState(false);
+  const [authState, setAuthState] = useState<AuthState>("idle");
+
+  // Simulate auth flow
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (authState !== "idle") return;
+    setAuthState("loading");
+    setTimeout(() => {
+      setAuthState("success");
+      setTimeout(() => setAuthState("idle"), 2200);
+    }, 1800);
+  };
 
   // Login fields
   const [loginEmail, setLoginEmail] = useState("");
@@ -278,7 +351,7 @@ const AuthCard = () => {
       >
         {mode === "login" ? (
           /* ── LOGIN FORM ── */
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <FloatingInput
               id="login-email"
               type="email"
@@ -309,7 +382,7 @@ const AuthCard = () => {
               </button>
             </div>
 
-            <PrimaryButton type="submit">Sign In</PrimaryButton>
+            <PrimaryButton type="submit" authState={authState}>Sign In</PrimaryButton>
 
             <div className="relative flex items-center gap-3 my-2">
               <div className="flex-1 h-px" style={{ background: "hsl(var(--border))" }} />
@@ -333,7 +406,7 @@ const AuthCard = () => {
           </form>
         ) : (
           /* ── REGISTER FORM ── */
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <FloatingInput
               id="reg-name"
               label="Full name"
@@ -381,7 +454,7 @@ const AuthCard = () => {
               </p>
             )}
 
-            <PrimaryButton type="submit">Create Account</PrimaryButton>
+            <PrimaryButton type="submit" authState={authState}>Create Account</PrimaryButton>
 
             <div className="relative flex items-center gap-3 my-2">
               <div className="flex-1 h-px" style={{ background: "hsl(var(--border))" }} />
