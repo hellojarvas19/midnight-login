@@ -8,6 +8,8 @@ import ProfilePage from "@/pages/dashboard/ProfilePage";
 
 type Section = "home" | "checker" | "profile";
 
+const SECTION_ORDER: Section[] = ["home", "checker", "profile"];
+
 const SECTION_TITLE: Record<Section, string> = {
   home:    "Home",
   checker: "Checker",
@@ -16,28 +18,38 @@ const SECTION_TITLE: Record<Section, string> = {
 
 const SWIPE_THRESHOLD = 60; // px leftward to trigger close
 
+// Transition states
+type TransitionPhase = "idle" | "exit" | "enter";
+
 const Dashboard = () => {
-  const [active, setActive] = useState<Section>("home");
-  const [collapsed, setCollapsed] = useState(false);
+  const [active, setActive]                   = useState<Section>("home");
+  const [collapsed, setCollapsed]             = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [pageKey, setPageKey] = useState(0);
-  const [pageVisible, setPageVisible] = useState(true);
+  const [pageKey, setPageKey]                 = useState(0);
+  const [phase, setPhase]                     = useState<TransitionPhase>("idle");
+  const [direction, setDirection]             = useState<1 | -1>(1); // 1 = forward, -1 = backward
   const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Swipe-to-close state
   const touchStartX = useRef<number | null>(null);
-  const [drawerDx, setDrawerDx] = useState(0); // live drag offset (px)
+  const [drawerDx, setDrawerDx] = useState(0);
   const isDragging = useRef(false);
 
   const navigateTo = (section: Section) => {
     if (section === active) return;
-    setPageVisible(false);
+    const fromIdx = SECTION_ORDER.indexOf(active);
+    const toIdx   = SECTION_ORDER.indexOf(section);
+    const dir: 1 | -1 = toIdx > fromIdx ? 1 : -1;
+    setDirection(dir);
+    setPhase("exit");
     if (transitionRef.current) clearTimeout(transitionRef.current);
     transitionRef.current = setTimeout(() => {
       setActive(section);
       setPageKey((k) => k + 1);
-      setPageVisible(true);
-    }, 180);
+      setPhase("enter");
+      // After enter animation completes, go idle
+      transitionRef.current = setTimeout(() => setPhase("idle"), 300);
+    }, 200);
   };
 
   /* ── Touch handlers ── */
@@ -180,14 +192,21 @@ const Dashboard = () => {
           </div>
         </header>
 
-        {/* Page content — crossfade transition */}
+        {/* Page content — directional slide transition */}
         <main className="flex-1 px-4 py-5 md:p-6 overflow-y-auto">
           <div
             key={pageKey}
             style={{
-              opacity: pageVisible ? 1 : 0,
-              transform: pageVisible ? "translateY(0)" : "translateY(12px)",
-              transition: "opacity 0.22s ease, transform 0.22s ease",
+              opacity:   phase === "exit" ? 0 : 1,
+              transform: phase === "exit"
+                ? `translateX(${direction * -40}px)`
+                : phase === "enter"
+                  ? `translateX(${direction * 32}px)`
+                  : "translateX(0)",
+              transition: phase === "enter"
+                ? "opacity 0.28s cubic-bezier(0.22,1,0.36,1), transform 0.28s cubic-bezier(0.22,1,0.36,1)"
+                : "opacity 0.18s ease, transform 0.18s ease",
+              willChange: "opacity, transform",
             }}
           >
             {active === "home"    && <HomePage />}
