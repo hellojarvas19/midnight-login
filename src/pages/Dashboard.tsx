@@ -1,23 +1,26 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Menu, ChevronRight, Home, CreditCard, Crown } from "lucide-react";
+import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import HomePage from "@/pages/dashboard/HomePage";
+import ChatPage from "@/pages/dashboard/ChatPage";
 import CheckerPage from "@/pages/dashboard/CheckerPage";
 import ProfilePage from "@/pages/dashboard/ProfilePage";
 
-type Section = "home" | "checker" | "profile";
+type Section = "home" | "chat" | "checker" | "profile";
 
-const SECTION_ORDER: Section[] = ["home", "checker", "profile"];
+const SECTION_ORDER: Section[] = ["home", "chat", "checker", "profile"];
 
 const SECTION_TITLE: Record<Section, string> = {
   home:    "Home",
+  chat:    "Chat",
   checker: "Checker",
   profile: "Profile",
 };
 
 const SECTION_ICON: Record<Section, typeof Home> = {
   home:    Home,
+  chat:    MessageCircle,
   checker: CreditCard,
   profile: Crown,
 };
@@ -29,6 +32,7 @@ type TransitionPhase = "idle" | "exit" | "enter";
 
 const PAGE_NODE: Record<Section, React.ReactNode> = {
   home:    <HomePage />,
+  chat:    <ChatPage />,
   checker: <CheckerPage />,
   profile: <ProfilePage />,
 };
@@ -259,12 +263,13 @@ const Dashboard = () => {
             {(() => {
               const SectionIcon = SECTION_ICON[active];
               const isProfile = active === "profile";
+              const isChat    = active === "chat";
               return (
                 <span
                   key={pageKey}
                   className="flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase"
                   style={{
-                    color: isProfile ? "hsl(48,100%,68%)" : "hsl(var(--foreground))",
+                    color: isProfile ? "hsl(48,100%,68%)" : isChat ? "hsl(200,100%,68%)" : "hsl(var(--foreground))",
                     animation: "breadcrumb-slide-in 0.28s cubic-bezier(0.22,1,0.36,1) both",
                   }}
                 >
@@ -272,10 +277,12 @@ const Dashboard = () => {
                     size={13}
                     style={{
                       flexShrink: 0,
-                      color: isProfile ? "hsl(48,100%,65%)" : "hsl(var(--primary))",
+                      color: isProfile ? "hsl(48,100%,65%)" : isChat ? "hsl(200,100%,65%)" : "hsl(var(--primary))",
                       filter: isProfile
                         ? "drop-shadow(0 0 4px hsla(44,100%,58%,0.7))"
-                        : "drop-shadow(0 0 4px hsla(315,90%,60%,0.55))",
+                        : isChat
+                          ? "drop-shadow(0 0 4px hsla(200,100%,60%,0.7))"
+                          : "drop-shadow(0 0 4px hsla(315,90%,60%,0.55))",
                     }}
                   />
                   {SECTION_TITLE[active]}
@@ -350,6 +357,7 @@ const Dashboard = () => {
             }}
           >
             {active === "home"    && <HomePage />}
+            {active === "chat"    && <ChatPage />}
             {active === "checker" && <CheckerPage />}
             {active === "profile" && <ProfilePage />}
           </div>
@@ -357,7 +365,7 @@ const Dashboard = () => {
 
         {/* ── Section dot indicator ── */}
         <div className="flex items-center justify-center gap-2 py-2">
-          {SECTION_ORDER.map((section, i) => {
+          {SECTION_ORDER.map((section) => {
             const isActive = section === active;
             return (
               <button
@@ -375,12 +383,16 @@ const Dashboard = () => {
                   background: isActive
                     ? section === "profile"
                       ? "linear-gradient(90deg, hsl(42,100%,52%), hsl(52,100%,72%))"
-                      : "hsl(var(--primary))"
+                      : section === "chat"
+                        ? "linear-gradient(90deg, hsl(200,100%,45%), hsl(200,100%,65%))"
+                        : "hsl(var(--primary))"
                     : "hsla(315,30%,40%,0.35)",
                   boxShadow: isActive
                     ? section === "profile"
                       ? "0 0 8px hsla(44,100%,55%,0.55)"
-                      : "0 0 8px hsla(315,90%,60%,0.55)"
+                      : section === "chat"
+                        ? "0 0 8px hsla(200,100%,55%,0.55)"
+                        : "0 0 8px hsla(315,90%,60%,0.55)"
                     : "none",
                   transition: "width 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease, box-shadow 0.3s ease",
                 }}
