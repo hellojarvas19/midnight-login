@@ -292,11 +292,17 @@ const ProfilePage = () => {
         {/* Name & username */}
         <div className="text-center">
           <h2
-            className="text-2xl font-black text-glow"
+            className="text-2xl font-black"
             style={{
               fontFamily: "'Space Grotesk', sans-serif",
-              color: "hsl(var(--primary))",
               letterSpacing: "-0.02em",
+              background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
+              backgroundSize: "200% auto",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              animation: "gold-shimmer 2.8s linear infinite",
+              filter: "drop-shadow(0 0 10px hsla(44,100%,58%,0.55))",
             }}
           >
             {user.name}

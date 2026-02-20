@@ -417,6 +417,12 @@ All colors MUST be HSL.
   50%        { translate: 0 -7px; }
 }
 
+/* ─── Gold shimmer text ─── */
+@keyframes gold-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
 /* ─── Gold aura pulse ─── */
 @keyframes gold-aura-pulse {
   0%, 100% {
