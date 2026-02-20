@@ -64,7 +64,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl mx-auto">
+    <div className="flex flex-col gap-6 w-full">
 
       {/* ── Profile Card ── */}
       <div

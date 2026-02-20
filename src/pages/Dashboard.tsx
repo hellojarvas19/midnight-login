@@ -37,7 +37,7 @@ const Dashboard = () => {
 
       {/* ── Sidebar ── */}
       <div
-        className="relative z-40 flex flex-col p-3"
+        className="relative z-40 flex flex-col p-2 md:p-3"
         style={{
           /* on mobile: fixed drawer; on md+: static */
           position: undefined,
@@ -114,7 +114,7 @@ const Dashboard = () => {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 px-4 py-5 md:p-6 overflow-y-auto">
           {active === "home"    && <HomePage />}
           {active === "checker" && <CheckerPage />}
           {active === "profile" && <ProfilePage />}
