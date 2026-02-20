@@ -40,12 +40,18 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
 
         {!collapsed && (
           <p
-            className="text-xs font-bold tracking-widest uppercase mt-1 text-glow"
+            className="text-xs font-bold tracking-widest uppercase mt-1"
             style={{
-              color: "hsl(var(--primary))",
               whiteSpace: "nowrap",
               opacity: collapsed ? 0 : 1,
               transition: "opacity 0.2s ease",
+              background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
+              backgroundSize: "200% auto",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              animation: "gold-shimmer 2.8s linear infinite",
+              filter: "drop-shadow(0 0 6px hsla(44,100%,58%,0.5))",
             }}
           >
             0xAdam
