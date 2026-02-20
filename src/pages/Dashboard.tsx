@@ -37,14 +37,11 @@ const Dashboard = () => {
 
       {/* ── Sidebar ── */}
       <div
-        className="relative z-40 flex flex-col p-2 md:p-3"
-        style={{
-          /* on mobile: fixed drawer; on md+: static */
-          position: undefined,
-        }}
+        className="hidden md:flex relative z-40 flex-col p-3"
+        style={{ position: undefined }}
       >
         {/* Desktop sidebar */}
-        <div className="hidden md:flex h-full" style={{ minHeight: "calc(100vh - 24px)" }}>
+        <div className="flex h-full" style={{ minHeight: "calc(100vh - 24px)" }}>
           <AppSidebar
             active={active}
             onNavigate={setActive}
