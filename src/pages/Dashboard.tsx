@@ -159,12 +159,24 @@ const Dashboard = () => {
           <div
             className="rounded-full px-3 py-1 text-xs font-semibold"
             style={{
-              background: "hsla(315, 80%, 45%, 0.18)",
-              color: "hsl(var(--primary))",
-              border: "1px solid hsla(315, 60%, 50%, 0.25)",
+              background: "hsla(44, 80%, 40%, 0.15)",
+              border: "1px solid hsla(44, 80%, 55%, 0.3)",
+              backgroundClip: "padding-box",
             }}
           >
-            0xAdam
+            <span
+              style={{
+                background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
+                backgroundSize: "200% auto",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                animation: "gold-shimmer 2.8s linear infinite",
+                filter: "drop-shadow(0 0 6px hsla(44,100%,58%,0.5))",
+              }}
+            >
+              0xAdam
+            </span>
           </div>
         </header>
 
