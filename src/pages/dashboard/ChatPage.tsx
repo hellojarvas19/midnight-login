@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   MessageCircle, Send, Image as ImageIcon, Mic,
   Pin, X, Play, Pause, MoreVertical, Check, CheckCheck,
-  Crown, Reply,
+  Crown, Reply, Search, ChevronUp, ChevronDown,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -329,7 +329,7 @@ const PinnedBanner = ({ message, onJump }: { message: ChatMessage; onJump: () =>
 
 /* ─── Message bubble ─── */
 const MessageBubble = ({
-  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, pinnedRef,
+  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, pinnedRef, searchQuery = "",
 }: {
   msg: ChatMessage;
   isOwn: boolean;
@@ -340,6 +340,7 @@ const MessageBubble = ({
   onReply: (msg: ChatMessage) => void;
   onScrollTo: (id: string) => void;
   pinnedRef?: (el: HTMLDivElement | null) => void;
+  searchQuery?: string;
 }) => {
   const [menuOpen, setMenuOpen]           = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -440,7 +441,9 @@ const MessageBubble = ({
             )}
 
             {msg.type === "text" && (
-              <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--foreground))" }}>{msg.content}</p>
+              <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--foreground))" }}>
+                <HighlightText text={msg.content} query={searchQuery} />
+              </p>
             )}
             {msg.type === "image" && (
               <div className="flex flex-col gap-1.5">
@@ -596,7 +599,110 @@ const TypingIndicator = ({ names }: { names: string[] }) => {
   );
 };
 
-/* ─── Main page ─── */
+/* ─── Highlight helper: wraps matched spans with a mark ─── */
+function HighlightText({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark
+            key={i}
+            style={{
+              background: "hsla(44,100%,58%,0.35)",
+              color: "hsl(44,100%,80%)",
+              borderRadius: 3,
+              padding: "0 2px",
+            }}
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
+/* ─── Search bar component ─── */
+const SearchBar = ({
+  value,
+  onChange,
+  onClose,
+  onPrev,
+  onNext,
+  matchIndex,
+  matchCount,
+  inputRef,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  matchIndex: number;
+  matchCount: number;
+  inputRef: React.RefObject<HTMLInputElement>;
+}) => (
+  <div
+    className="flex items-center gap-2 px-3 py-2 border-b shrink-0"
+    style={{
+      borderColor: "hsla(315,30%,25%,0.2)",
+      background: "hsla(330,20%,4%,0.7)",
+      animation: "reply-slide-in 0.22s cubic-bezier(0.34,1.56,0.64,1) both",
+    }}
+  >
+    <Search size={13} style={{ color: "hsl(315,90%,65%)", flexShrink: 0 }} />
+    <input
+      ref={inputRef}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { e.shiftKey ? onPrev() : onNext(); }
+        if (e.key === "Escape") onClose();
+      }}
+      placeholder="Search messages…"
+      className="flex-1 bg-transparent text-sm outline-none placeholder:opacity-40"
+      style={{ color: "hsl(var(--foreground))" }}
+    />
+    {value && (
+      <span className="text-xs tabular-nums shrink-0" style={{ color: "hsl(var(--muted-foreground))" }}>
+        {matchCount === 0 ? "No results" : `${matchIndex + 1} / ${matchCount}`}
+      </span>
+    )}
+    <button
+      onClick={onPrev}
+      disabled={matchCount === 0}
+      className="rounded-md p-1 transition-opacity hover:opacity-80 disabled:opacity-30"
+      style={{ color: "hsl(var(--muted-foreground))" }}
+      title="Previous match"
+    >
+      <ChevronUp size={14} />
+    </button>
+    <button
+      onClick={onNext}
+      disabled={matchCount === 0}
+      className="rounded-md p-1 transition-opacity hover:opacity-80 disabled:opacity-30"
+      style={{ color: "hsl(var(--muted-foreground))" }}
+      title="Next match"
+    >
+      <ChevronDown size={14} />
+    </button>
+    <button
+      onClick={onClose}
+      className="rounded-md p-1 transition-opacity hover:opacity-80"
+      style={{ color: "hsl(var(--muted-foreground))" }}
+      title="Close search"
+    >
+      <X size={14} />
+    </button>
+  </div>
+);
+
+
 const ChatPage = () => {
   const [messages, setMessages]           = useState<ChatMessage[]>(SEED);
   const [text, setText]                   = useState("");
@@ -604,6 +710,12 @@ const ChatPage = () => {
   const [recordingMs, setRecordingMs]     = useState(0);
   const [replyTarget, setReplyTarget]     = useState<ChatMessage | null>(null);
   const [typingNames, setTypingNames]     = useState<string[]>([]);
+  /* ── Search ── */
+  const [searchOpen, setSearchOpen]       = useState(false);
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [searchMatchIdx, setSearchMatchIdx] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const bottomRef    = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recordTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -614,6 +726,49 @@ const ChatPage = () => {
 
   const pinnedMessage = messages.find((m) => m.pinned) ?? null;
   const typingDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ── Derive matching message IDs ── */
+  const matchIds = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [] as string[];
+    return messages
+      .filter((m) => m.type === "text" && m.content.toLowerCase().includes(q))
+      .map((m) => m.id);
+  }, [messages, searchQuery]);
+
+  /* ── Auto-scroll to current match ── */
+  useEffect(() => {
+    if (matchIds.length === 0) return;
+    const id = matchIds[searchMatchIdx];
+    const el = msgRefs.current.get(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [matchIds, searchMatchIdx]);
+
+  /* ── Open / close search ── */
+  const openSearch = () => {
+    setSearchOpen(true);
+    setSearchQuery("");
+    setSearchMatchIdx(0);
+    setTimeout(() => searchInputRef.current?.focus(), 60);
+  };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchMatchIdx(0);
+  };
+
+  const searchNext = () => {
+    if (matchIds.length === 0) return;
+    setSearchMatchIdx((i) => (i + 1) % matchIds.length);
+  };
+  const searchPrev = () => {
+    if (matchIds.length === 0) return;
+    setSearchMatchIdx((i) => (i - 1 + matchIds.length) % matchIds.length);
+  };
+
+  /* Reset match index when query changes */
+  useEffect(() => { setSearchMatchIdx(0); }, [searchQuery]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -774,7 +929,20 @@ const ChatPage = () => {
             Community Chat
           </p>
           <div className="flex-1" />
-          <div className="flex items-center gap-1.5">
+          {/* Search toggle */}
+          <button
+            onClick={searchOpen ? closeSearch : openSearch}
+            className="rounded-xl p-2 transition-all hover:opacity-80 active:scale-90"
+            style={{
+              background: searchOpen ? "hsla(315,80%,40%,0.25)" : "transparent",
+              border: searchOpen ? "1px solid hsla(315,60%,55%,0.35)" : "1px solid transparent",
+              color: searchOpen ? "hsl(315,90%,65%)" : "hsl(var(--muted-foreground))",
+            }}
+            title="Search messages"
+          >
+            <Search size={14} />
+          </button>
+          <div className="flex items-center gap-1.5 ml-1">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "hsl(142,70%,55%)" }} />
               <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "hsl(142,70%,55%)" }} />
@@ -782,6 +950,20 @@ const ChatPage = () => {
             <span className="text-xs font-medium" style={{ color: "hsl(142,70%,55%)" }}>24 online</span>
           </div>
         </div>
+
+        {/* Search bar */}
+        {searchOpen && (
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onClose={closeSearch}
+            onPrev={searchPrev}
+            onNext={searchNext}
+            matchIndex={searchMatchIdx}
+            matchCount={matchIds.length}
+            inputRef={searchInputRef}
+          />
+        )}
 
         {/* Pinned banner */}
         {pinnedMessage && <PinnedBanner message={pinnedMessage} onJump={scrollToPinned} />}
@@ -791,28 +973,41 @@ const ChatPage = () => {
           className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 min-h-0"
           style={{ scrollbarWidth: "thin", scrollbarColor: "hsla(315,40%,30%,0.3) transparent" }}
         >
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              ref={(el) => {
-                if (el) msgRefs.current.set(msg.id, el);
-                else msgRefs.current.delete(msg.id);
-                if (msg.pinned && el) pinnedMsgRef.current = el;
-              }}
-              style={{ borderRadius: 16, transition: "background 0.6s ease" }}
-            >
-              <MessageBubble
-                msg={msg}
-                isOwn={msg.sender === MY_NAME}
-                isAdmin={IS_ADMIN}
-                onPin={pinMessage}
-                onUnpin={unpinMessage}
-                onReact={reactToMessage}
-                onReply={setReplyTarget}
-                onScrollTo={scrollToMessage}
-              />
-            </div>
-          ))}
+          {messages.map((msg, _i) => {
+            const isMatch = matchIds.includes(msg.id);
+            const isActive = isMatch && matchIds[searchMatchIdx] === msg.id;
+            return (
+              <div
+                key={msg.id}
+                ref={(el) => {
+                  if (el) msgRefs.current.set(msg.id, el);
+                  else msgRefs.current.delete(msg.id);
+                  if (msg.pinned && el) pinnedMsgRef.current = el;
+                }}
+                style={{
+                  borderRadius: 16,
+                  transition: "background 0.4s ease, box-shadow 0.3s ease",
+                  ...(isActive
+                    ? { boxShadow: "0 0 0 2px hsl(44,100%,58%), 0 0 18px hsla(44,100%,55%,0.25)" }
+                    : isMatch
+                    ? { boxShadow: "0 0 0 1.5px hsla(44,100%,58%,0.45)" }
+                    : {}),
+                }}
+              >
+                <MessageBubble
+                  msg={msg}
+                  isOwn={msg.sender === MY_NAME}
+                  isAdmin={IS_ADMIN}
+                  onPin={pinMessage}
+                  onUnpin={unpinMessage}
+                  onReact={reactToMessage}
+                  onReply={setReplyTarget}
+                  onScrollTo={scrollToMessage}
+                  searchQuery={searchOpen ? searchQuery : ""}
+                />
+              </div>
+            );
+          })}
           {/* Typing indicator */}
           <TypingIndicator names={typingNames} />
           <div ref={bottomRef} />
