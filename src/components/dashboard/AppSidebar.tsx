@@ -64,7 +64,8 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
         style={{
           height: 1,
           margin: "0 12px 8px",
-          background: "hsla(315, 60%, 55%, 0.18)",
+          background: "linear-gradient(90deg, transparent 0%, hsl(42,100%,52%) 25%, hsl(52,100%,78%) 50%, hsl(42,100%,52%) 75%, transparent 100%)",
+          boxShadow: "0 0 8px 1px hsla(44,100%,58%,0.45)",
         }}
       />
 
