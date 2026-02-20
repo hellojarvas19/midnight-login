@@ -10,6 +10,8 @@ import {
   Check,
   ShieldCheck,
   LogOut,
+  Link2,
+  Users,
 } from "lucide-react";
 import logoCharacter from "@/assets/logo-character.jpg";
 
@@ -22,6 +24,9 @@ const MOCK_USER = {
   joinedDate: "Jan 2026",
   credits: 2_480,
   plan: "Pro",
+  referralCode: "ref_0xadam",
+  referralCount: 12,
+  referralLink: "https://t.me/OxAdamCheckerBot?start=ref_0xadam",
 };
 
 type TxType = "credit" | "debit" | "bonus";
@@ -137,9 +142,10 @@ const CrownSparkles = () => {
 };
 
 const ProfilePage = () => {
-  const [copiedId, setCopiedId] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [loggedOut, setLoggedOut] = useState(false);
+  const [copiedId, setCopiedId]           = useState(false);
+  const [copiedRef, setCopiedRef]         = useState(false);
+  const [loggingOut, setLoggingOut]       = useState(false);
+  const [loggedOut, setLoggedOut]         = useState(false);
   const [creditsBarWidth, setCreditsBarWidth] = useState(0);
   const user = MOCK_USER;
 
@@ -162,6 +168,14 @@ const ProfilePage = () => {
       await navigator.clipboard.writeText(user.telegramId);
       setCopiedId(true);
       setTimeout(() => setCopiedId(false), 2000);
+    } catch {}
+  };
+
+  const handleCopyRef = async () => {
+    try {
+      await navigator.clipboard.writeText(user.referralLink);
+      setCopiedRef(true);
+      setTimeout(() => setCopiedRef(false), 2000);
     } catch {}
   };
 
@@ -438,6 +452,122 @@ const ProfilePage = () => {
             />
           </div>
         </div>
+      </div>
+
+      {/* ── Referral Section ── */}
+      <div
+        className="glass-card animate-card-entrance rounded-2xl p-6"
+        style={{ animationDelay: "120ms", animationFillMode: "both" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="rounded-xl p-2" style={{ background: "hsla(44,90%,45%,0.15)" }}>
+              <Users size={16} style={{ color: "hsl(48,100%,65%)", filter: "drop-shadow(0 0 5px hsla(44,100%,58%,0.6))" }} />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+              Referral Program
+            </p>
+          </div>
+          {/* Referral count badge */}
+          <div
+            className="flex items-center gap-1.5 rounded-full px-3 py-1"
+            style={{
+              background: "hsla(44,90%,45%,0.14)",
+              border: "1px solid hsla(44,90%,55%,0.32)",
+            }}
+          >
+            <Users size={10} style={{ color: "hsl(48,100%,68%)" }} />
+            <span className="text-xs font-bold" style={{ color: "hsl(48,100%,70%)" }}>
+              {user.referralCount} referred
+            </span>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div
+          className="grid grid-cols-2 gap-3 mb-5 rounded-xl p-3"
+          style={{ background: "hsla(44,80%,40%,0.07)", border: "1px solid hsla(44,80%,50%,0.12)" }}
+        >
+          <div className="flex flex-col items-center gap-0.5">
+            <p
+              className="text-2xl font-black"
+              style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 50%, hsl(42,100%,52%) 100%)",
+                backgroundSize: "200% auto",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                animation: "gold-shimmer 2.8s linear infinite",
+              }}
+            >
+              {user.referralCount}
+            </p>
+            <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>Friends joined</p>
+          </div>
+          <div className="flex flex-col items-center gap-0.5">
+            <p
+              className="text-2xl font-black"
+              style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 50%, hsl(42,100%,52%) 100%)",
+                backgroundSize: "200% auto",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                animation: "gold-shimmer 2.8s linear infinite",
+              }}
+            >
+              +{user.referralCount * 100}
+            </p>
+            <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>Credits earned</p>
+          </div>
+        </div>
+
+        {/* Referral link row */}
+        <div
+          className="flex items-center gap-2 rounded-xl px-4 py-3"
+          style={{ background: "hsla(330,18%,6%,0.7)", border: "1px solid hsla(44,60%,40%,0.22)" }}
+        >
+          <div className="rounded-lg p-2" style={{ background: "hsla(44,80%,40%,0.14)" }}>
+            <Link2 size={13} style={{ color: "hsl(48,100%,65%)", filter: "drop-shadow(0 0 4px hsla(44,100%,58%,0.55))" }} />
+          </div>
+          <p
+            className="flex-1 text-xs font-mono truncate"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
+            {user.referralLink}
+          </p>
+          <button
+            onClick={handleCopyRef}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              background: copiedRef
+                ? "hsla(142,60%,20%,0.45)"
+                : "linear-gradient(135deg, hsla(44,90%,48%,0.30), hsla(42,80%,36%,0.20))",
+              border: copiedRef
+                ? "1px solid hsla(142,60%,45%,0.5)"
+                : "1px solid hsla(44,90%,58%,0.40)",
+              color: copiedRef ? "hsl(142,70%,60%)" : "hsl(48,100%,68%)",
+              boxShadow: copiedRef
+                ? "0 0 12px hsla(142,70%,50%,0.25)"
+                : "0 0 12px hsla(44,100%,55%,0.22)",
+              whiteSpace: "nowrap",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {copiedRef ? <Check size={12} /> : <Copy size={12} />}
+            {copiedRef ? "Copied!" : "Copy link"}
+          </button>
+        </div>
+
+        {/* Earn-per-referral note */}
+        <p className="text-center text-[10px] mt-3" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.7 }}>
+          Earn&nbsp;
+          <span style={{ color: "hsl(48,100%,65%)", fontWeight: 700 }}>+100 credits</span>
+          &nbsp;for every friend who joins via your link
+        </p>
       </div>
 
       {/* ── Transaction History ── */}
