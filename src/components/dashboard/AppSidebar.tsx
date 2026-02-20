@@ -108,8 +108,16 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
                 size={18}
                 style={{
                   flexShrink: 0,
-                  color: isActive ? "hsl(var(--primary))" : "hsl(var(--sidebar-foreground))",
-                  filter: isActive ? "drop-shadow(0 0 6px hsla(315,90%,60%,0.7))" : "none",
+                  color: isActive
+                    ? id === "profile"
+                      ? "hsl(45, 100%, 65%)"
+                      : "hsl(var(--primary))"
+                    : "hsl(var(--sidebar-foreground))",
+                  filter: isActive
+                    ? id === "profile"
+                      ? "drop-shadow(0 0 6px hsla(45,100%,60%,0.85))"
+                      : "drop-shadow(0 0 6px hsla(315,90%,60%,0.7))"
+                    : "none",
                   transition: "filter 0.2s ease, color 0.2s ease",
                 }}
               />
