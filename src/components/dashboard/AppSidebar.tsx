@@ -140,7 +140,23 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
                 }}
               />
               {!collapsed && (
-                <span style={{ whiteSpace: "nowrap", overflow: "hidden" }}>{label}</span>
+                <span className="flex items-center gap-2" style={{ whiteSpace: "nowrap", overflow: "hidden" }}>
+                  {label}
+                  {id === "profile" && (
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        background: "hsl(48,100%,65%)",
+                        boxShadow: "0 0 6px 2px hsla(44,100%,58%,0.75), 0 0 12px 3px hsla(44,100%,52%,0.4)",
+                        animation: "gold-dot-pulse 2.2s ease-in-out infinite",
+                        display: "inline-block",
+                      }}
+                    />
+                  )}
+                </span>
               )}
             </button>
           );

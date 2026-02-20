@@ -451,3 +451,15 @@ All colors MUST be HSL.
     color: hsl(52, 100%, 75%);
   }
 }
+
+/* ─── Gold dot pulse ─── */
+@keyframes gold-dot-pulse {
+  0%, 100% {
+    box-shadow: 0 0 6px 2px hsla(44,100%,58%,0.70), 0 0 12px 3px hsla(44,100%,52%,0.35);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 10px 4px hsla(44,100%,62%,0.95), 0 0 22px 6px hsla(44,100%,55%,0.55);
+    opacity: 0.85;
+  }
+}
