@@ -132,7 +132,10 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
                     ? id === "profile"
                       ? "drop-shadow(0 0 6px hsla(45,100%,60%,0.85))"
                       : "drop-shadow(0 0 6px hsla(315,90%,60%,0.7))"
-                    : "none",
+                    : id === "profile"
+                      ? "drop-shadow(0 0 3px hsla(45,100%,60%,0.4))"
+                      : "none",
+                  animation: id === "profile" ? "gold-crown-pulse 2.4s ease-in-out infinite" : "none",
                   transition: "filter 0.2s ease, color 0.2s ease",
                 }}
               />
