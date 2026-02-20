@@ -225,18 +225,18 @@ const PrimaryButton = ({
     <button
       type={type}
       disabled={isLoading || isSuccess}
-      className="btn-shimmer w-full rounded-xl py-3.5 text-sm font-bold tracking-wide transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed relative overflow-hidden"
+      className="btn-shimmer w-full rounded-xl py-3.5 text-sm font-bold tracking-wide transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed relative overflow-hidden animate-pulse-glow"
       style={{
         background: isSuccess
-          ? "linear-gradient(135deg, hsl(145,60%,40%), hsl(145,60%,32%))"
-          : "linear-gradient(135deg, hsl(315,90%,52%), hsl(340,80%,42%))",
+          ? "linear-gradient(135deg, hsl(145,65%,35%), hsl(145,55%,28%))"
+          : "linear-gradient(135deg, hsl(315,95%,50%), hsl(335,85%,38%))",
         color: "hsl(var(--primary-foreground))",
         boxShadow: isSuccess
-          ? "0 4px 32px hsla(145,60%,40%,0.5)"
-          : "0 4px 32px hsla(315,90%,55%,0.45)",
+          ? "0 4px 40px hsla(145,65%,38%,0.65), 0 0 80px hsla(145,55%,30%,0.25)"
+          : undefined,
         border: isSuccess
-          ? "1px solid hsla(145,60%,60%,0.25)"
-          : "1px solid hsla(315,80%,70%,0.2)",
+          ? "1px solid hsla(145,65%,55%,0.3)"
+          : "1px solid hsla(315,80%,68%,0.25)",
         transition: "background 0.5s ease, box-shadow 0.5s ease",
       }}
     >
@@ -419,9 +419,9 @@ const AuthCard = () => {
             onClick={() => switchMode(m)}
             className="flex-1 py-2 rounded-lg text-sm font-semibold capitalize transition-all duration-300"
             style={{
-              background: mode === m ? "linear-gradient(135deg, hsl(315,90%,52%), hsl(340,80%,42%))" : "transparent",
+              background: mode === m ? "linear-gradient(135deg, hsl(315,95%,50%), hsl(335,85%,38%))" : "transparent",
               color: mode === m ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-              boxShadow: mode === m ? "0 2px 12px hsla(315,90%,55%,0.45)" : "none",
+              boxShadow: mode === m ? "0 2px 20px hsla(315,95%,52%,0.6), 0 0 40px hsla(315,80%,45%,0.2)" : "none",
             }}
           >
             {m === "login" ? "Sign In" : "Register"}
