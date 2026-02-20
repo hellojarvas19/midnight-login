@@ -355,9 +355,43 @@ const Dashboard = () => {
           </div>
         </main>
 
+        {/* ── Section dot indicator ── */}
+        <div className="flex items-center justify-center gap-2 py-2">
+          {SECTION_ORDER.map((section, i) => {
+            const isActive = section === active;
+            return (
+              <button
+                key={section}
+                type="button"
+                aria-label={`Go to ${SECTION_TITLE[section]}`}
+                onClick={() => navigateTo(section)}
+                style={{
+                  width:  isActive ? 20 : 6,
+                  height: 6,
+                  borderRadius: 999,
+                  border: "none",
+                  padding: 0,
+                  cursor: isActive ? "default" : "pointer",
+                  background: isActive
+                    ? section === "profile"
+                      ? "linear-gradient(90deg, hsl(42,100%,52%), hsl(52,100%,72%))"
+                      : "hsl(var(--primary))"
+                    : "hsla(315,30%,40%,0.35)",
+                  boxShadow: isActive
+                    ? section === "profile"
+                      ? "0 0 8px hsla(44,100%,55%,0.55)"
+                      : "0 0 8px hsla(315,90%,60%,0.55)"
+                    : "none",
+                  transition: "width 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease, box-shadow 0.3s ease",
+                }}
+              />
+            );
+          })}
+        </div>
+
         {/* Footer */}
         <footer
-          className="px-6 py-3 text-center text-xs"
+          className="px-6 pb-3 text-center text-xs"
           style={{ color: "hsl(var(--muted-foreground))" }}
         >
           © 2026 0xAdam Checker · All rights reserved
