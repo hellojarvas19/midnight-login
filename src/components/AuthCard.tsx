@@ -404,11 +404,11 @@ const AuthCard = () => {
           className="text-2xl font-extrabold tracking-tight text-glow"
           style={{ color: "hsl(var(--foreground))" }}
         >
-          {mode === "login" ? "Welcome back" : "Create account"}
+          {mode === "login" ? "0xAdam" : "Create account"}
         </h1>
         <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
           {mode === "login"
-            ? "Sign in to your SaaS dashboard"
+            ? "Chk"
             : "Start your journey with us today"}
         </p>
       </div>
