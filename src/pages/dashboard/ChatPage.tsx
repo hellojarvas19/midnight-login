@@ -528,6 +528,74 @@ const MessageBubble = ({
   );
 };
 
+/* ─── Typing indicator ─── */
+const TYPERS = ["CryptoZero", "NightCoder", "w3b_ghost"];
+
+const TypingIndicator = ({ names }: { names: string[] }) => {
+  if (names.length === 0) return null;
+  const label =
+    names.length === 1
+      ? `${names[0]} is typing`
+      : names.length === 2
+      ? `${names[0]} and ${names[1]} are typing`
+      : `${names[0]} and ${names.length - 1} others are typing`;
+
+  return (
+    <div
+      className="flex items-center gap-2.5 px-1"
+      style={{ animation: "typing-fade-in 0.25s cubic-bezier(0.34,1.56,0.64,1) both" }}
+    >
+      {/* Avatar stack */}
+      <div className="flex -space-x-1.5">
+        {names.slice(0, 2).map((name) => (
+          <div
+            key={name}
+            className="rounded-full flex items-center justify-center text-[9px] font-bold"
+            style={{
+              width: 20, height: 20,
+              background: "hsla(315,80%,40%,0.25)",
+              border: "1.5px solid hsla(315,50%,40%,0.4)",
+              color: "hsl(var(--foreground))",
+            }}
+          >
+            {name[0].toUpperCase()}
+          </div>
+        ))}
+      </div>
+
+      {/* Dots */}
+      <div
+        className="flex items-center gap-1.5 rounded-2xl px-3 py-2"
+        style={{
+          background: "hsla(330,18%,8%,0.75)",
+          border: "1px solid hsla(315,30%,25%,0.22)",
+          backdropFilter: "blur(16px)",
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            style={{
+              display: "block",
+              width: 6, height: 6,
+              borderRadius: "50%",
+              background: "hsl(315,90%,65%)",
+              animation: `typing-bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+
+      <span
+        className="text-xs"
+        style={{ color: "hsl(var(--muted-foreground))", opacity: 0.65 }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+};
+
 /* ─── Main page ─── */
 const ChatPage = () => {
   const [messages, setMessages]           = useState<ChatMessage[]>(SEED);
@@ -535,6 +603,7 @@ const ChatPage = () => {
   const [isRecording, setIsRecording]     = useState(false);
   const [recordingMs, setRecordingMs]     = useState(0);
   const [replyTarget, setReplyTarget]     = useState<ChatMessage | null>(null);
+  const [typingNames, setTypingNames]     = useState<string[]>([]);
   const bottomRef    = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recordTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -544,15 +613,26 @@ const ChatPage = () => {
   const msgRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const pinnedMessage = messages.find((m) => m.pinned) ?? null;
+  const typingDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, typingNames]);
 
   /* Focus textarea when reply is set */
   useEffect(() => {
     if (replyTarget) textareaRef.current?.focus();
   }, [replyTarget]);
+
+  /* Simulate someone typing whenever the user types — auto-dismiss after 3 s */
+  const triggerTypingSimulation = useCallback(() => {
+    if (typingDismissTimer.current) clearTimeout(typingDismissTimer.current);
+    // pick 1–2 random typers
+    const shuffled = [...TYPERS].sort(() => Math.random() - 0.5);
+    const count = Math.random() > 0.5 ? 1 : 2;
+    setTypingNames(shuffled.slice(0, count));
+    typingDismissTimer.current = setTimeout(() => setTypingNames([]), 3000);
+  }, []);
 
   /* Send */
   const sendText = () => {
@@ -733,7 +813,10 @@ const ChatPage = () => {
               />
             </div>
           ))}
+          {/* Typing indicator */}
+          <TypingIndicator names={typingNames} />
           <div ref={bottomRef} />
+
         </div>
 
         {/* Input bar */}
@@ -791,7 +874,7 @@ const ChatPage = () => {
               <textarea
                 ref={textareaRef}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => { setText(e.target.value); if (e.target.value) triggerTypingSimulation(); }}
                 onKeyDown={handleKeyDown}
                 placeholder={replyTarget ? `Replying to ${replyTarget.sender}…` : "Type a message…"}
                 rows={1}
