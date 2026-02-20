@@ -89,8 +89,57 @@ const ProfilePage = () => {
         className="glass-card animate-card-entrance rounded-2xl p-6 flex flex-col items-center gap-4"
         style={{ animationDelay: "0ms", animationFillMode: "both" }}
       >
-        {/* Avatar */}
-        <div className="relative">
+        {/* Avatar + Crown */}
+        <div className="relative flex flex-col items-center">
+          {/* Rotating tilted golden crown */}
+          <div
+            style={{
+              position: "absolute",
+              top: -38,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 10,
+              animation: "crown-tilt-spin 3.6s ease-in-out infinite",
+              transformOrigin: "center bottom",
+              filter: "drop-shadow(0 0 8px hsla(45,100%,55%,0.85)) drop-shadow(0 0 18px hsla(45,90%,50%,0.5))",
+            }}
+          >
+            <svg width="48" height="36" viewBox="0 0 48 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Crown base */}
+              <path
+                d="M4 30 L4 22 L12 8 L24 18 L36 8 L44 22 L44 30 Z"
+                fill="url(#crownGrad)"
+                stroke="hsl(45,100%,75%)"
+                strokeWidth="1.2"
+                strokeLinejoin="round"
+              />
+              {/* Band */}
+              <rect x="4" y="27" width="40" height="5" rx="2" fill="url(#bandGrad)" stroke="hsl(45,100%,75%)" strokeWidth="0.8"/>
+              {/* Jewels */}
+              <circle cx="24" cy="24" r="3" fill="hsl(315,95%,65%)" style={{ filter: "drop-shadow(0 0 4px hsl(315,95%,65%))" }}/>
+              <circle cx="11" cy="27" r="2" fill="hsl(200,90%,65%)" />
+              <circle cx="37" cy="27" r="2" fill="hsl(142,70%,60%)" />
+              {/* Top balls */}
+              <circle cx="12" cy="8"  r="3" fill="url(#crownGrad)" stroke="hsl(45,100%,80%)" strokeWidth="1"/>
+              <circle cx="24" cy="18" r="3" fill="url(#crownGrad)" stroke="hsl(45,100%,80%)" strokeWidth="1"/>
+              <circle cx="36" cy="8"  r="3" fill="url(#crownGrad)" stroke="hsl(45,100%,80%)" strokeWidth="1"/>
+              {/* Shine */}
+              <ellipse cx="18" cy="15" rx="5" ry="2" fill="hsla(0,0%,100%,0.18)" transform="rotate(-20 18 15)"/>
+              <defs>
+                <linearGradient id="crownGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="hsl(48,100%,72%)"/>
+                  <stop offset="50%"  stopColor="hsl(42,100%,52%)"/>
+                  <stop offset="100%" stopColor="hsl(36,90%,38%)"/>
+                </linearGradient>
+                <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="hsl(44,100%,58%)"/>
+                  <stop offset="100%" stopColor="hsl(36,90%,40%)"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
+          {/* Avatar ring */}
           <div
             className="rounded-full overflow-hidden"
             style={{

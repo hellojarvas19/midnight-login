@@ -402,3 +402,12 @@ All colors MUST be HSL.
   100% { transform: rotate(360deg); }
 }
 
+/* ─── Crown tilt + rotation animation ─── */
+@keyframes crown-tilt-spin {
+  0%   { transform: translateX(-50%) rotate(-18deg) scale(1);    }
+  20%  { transform: translateX(-50%) rotate(12deg)  scale(1.08); }
+  40%  { transform: translateX(-50%) rotate(-10deg) scale(1.04); }
+  60%  { transform: translateX(-50%) rotate(15deg)  scale(1.1);  }
+  80%  { transform: translateX(-50%) rotate(-14deg) scale(1.05); }
+  100% { transform: translateX(-50%) rotate(-18deg) scale(1);    }
+}
