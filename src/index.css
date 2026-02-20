@@ -391,3 +391,14 @@ All colors MUST be HSL.
   80%       { transform: rotate(4deg) scale(1.02); }
 }
 
+/* ─── Sparkle burst keyframes ─── */
+@keyframes sparkle-fly {
+  0%   { transform: translate(0, 0) scale(1);   opacity: 1; }
+  100% { transform: var(--tx) var(--ty) scale(0); opacity: 0; }
+}
+
+@keyframes sparkle-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
