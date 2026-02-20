@@ -14,6 +14,8 @@ const SECTION_TITLE: Record<Section, string> = {
   profile: "Profile",
 };
 
+const SWIPE_THRESHOLD = 60; // px leftward to trigger close
+
 const Dashboard = () => {
   const [active, setActive] = useState<Section>("home");
   const [collapsed, setCollapsed] = useState(false);
@@ -21,6 +23,11 @@ const Dashboard = () => {
   const [pageKey, setPageKey] = useState(0);
   const [pageVisible, setPageVisible] = useState(true);
   const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Swipe-to-close state
+  const touchStartX = useRef<number | null>(null);
+  const [drawerDx, setDrawerDx] = useState(0); // live drag offset (px)
+  const isDragging = useRef(false);
 
   const navigateTo = (section: Section) => {
     if (section === active) return;
@@ -32,6 +39,32 @@ const Dashboard = () => {
       setPageVisible(true);
     }, 180);
   };
+
+  /* ── Touch handlers ── */
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    isDragging.current = true;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current || touchStartX.current === null) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    // Only allow leftward drag (negative)
+    setDrawerDx(Math.min(0, dx));
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    const endX = e.changedTouches[0].clientX;
+    const dx = endX - (touchStartX.current ?? endX);
+    touchStartX.current = null;
+    setDrawerDx(0);
+    if (dx < -SWIPE_THRESHOLD) {
+      setMobileSidebarOpen(false);
+    }
+  };
+
 
   return (
     <div
@@ -69,13 +102,19 @@ const Dashboard = () => {
       {/* ── Mobile Drawer ── */}
       <div
         className="fixed top-0 left-0 h-full z-40 flex flex-col p-3 md:hidden"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
-          transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-110%)",
-          transition: "transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+          transform: mobileSidebarOpen
+            ? `translateX(${drawerDx}px)`
+            : "translateX(-110%)",
+          transition: isDragging.current ? "none" : "transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
           willChange: "transform",
           filter: mobileSidebarOpen
             ? "drop-shadow(8px 0 32px hsla(315,80%,40%,0.35))"
             : "drop-shadow(0 0 0 transparent)",
+          opacity: mobileSidebarOpen ? Math.max(0.2, 1 + drawerDx / 200) : 1,
         }}
       >
         <AppSidebar
