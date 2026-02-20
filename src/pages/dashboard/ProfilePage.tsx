@@ -1,4 +1,31 @@
 import { useState, useEffect, useRef } from "react";
+
+/* ─── Animated counter hook ─── */
+function useCountUp(target: number, duration = 1400, delay = 0) {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setValue(0);
+    const timeout = setTimeout(() => {
+      const start = performance.now();
+      const tick = (now: number) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setValue(Math.round(eased * target));
+        if (progress < 1) rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    }, delay);
+    return () => {
+      clearTimeout(timeout);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, duration, delay]);
+
+  return value;
+}
 import {
   User,
   Hash,
@@ -148,6 +175,10 @@ const ProfilePage = () => {
   const [loggedOut, setLoggedOut]         = useState(false);
   const [creditsBarWidth, setCreditsBarWidth] = useState(0);
   const user = MOCK_USER;
+
+  // Animated referral stat counters (delay so card entrance finishes first)
+  const referralFriendsCount  = useCountUp(user.referralCount,       1200, 350);
+  const referralCreditsCount  = useCountUp(user.referralCount * 100, 1400, 450);
 
   // Animate credits bar from 0 → 7% on mount
   useEffect(() => {
@@ -491,7 +522,7 @@ const ProfilePage = () => {
         >
           <div className="flex flex-col items-center gap-0.5">
             <p
-              className="text-2xl font-black"
+              className="text-2xl font-black tabular-nums"
               style={{
                 fontFamily: "'Space Grotesk', sans-serif",
                 background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 50%, hsl(42,100%,52%) 100%)",
@@ -502,13 +533,13 @@ const ProfilePage = () => {
                 animation: "gold-shimmer 2.8s linear infinite",
               }}
             >
-              {user.referralCount}
+              {referralFriendsCount}
             </p>
             <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>Friends joined</p>
           </div>
           <div className="flex flex-col items-center gap-0.5">
             <p
-              className="text-2xl font-black"
+              className="text-2xl font-black tabular-nums"
               style={{
                 fontFamily: "'Space Grotesk', sans-serif",
                 background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 50%, hsl(42,100%,52%) 100%)",
@@ -519,7 +550,7 @@ const ProfilePage = () => {
                 animation: "gold-shimmer 2.8s linear infinite",
               }}
             >
-              +{user.referralCount * 100}
+              +{referralCreditsCount}
             </p>
             <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>Credits earned</p>
           </div>
