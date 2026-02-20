@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   User,
   Hash,
@@ -52,6 +52,90 @@ const TX_CONFIG: Record<TxType, { color: string; bg: string; Icon: typeof ArrowD
   bonus:  { color: "hsl(315,95%,65%)",  bg: "hsla(315,80%,30%,0.2)",  Icon: Gift           },
 };
 
+/* ─── Crown Sparkles ─── */
+type CrownParticle = {
+  id: number;
+  x: number;       // % offset from center
+  sx: number;      // horizontal drift px
+  size: number;
+  opacity: number;
+  duration: number; // ms
+  delay: number;    // ms
+  color: string;
+  shape: "star" | "dot" | "diamond";
+};
+
+const GOLD_COLORS = [
+  "hsl(48,100%,72%)", "hsl(44,100%,65%)", "hsl(42,100%,55%)",
+  "hsl(52,100%,78%)", "hsl(38,95%,60%)",  "hsl(0,0%,100%)",
+];
+
+let _pid = 0;
+const makeParticle = (): CrownParticle => ({
+  id: _pid++,
+  x: Math.random() * 80 - 40,
+  sx: Math.random() * 20 - 10,
+  size: 4 + Math.random() * 5,
+  opacity: 0.7 + Math.random() * 0.3,
+  duration: 1400 + Math.random() * 1000,
+  delay: 0,
+  color: GOLD_COLORS[Math.floor(Math.random() * GOLD_COLORS.length)],
+  shape: (["star", "dot", "diamond"] as const)[Math.floor(Math.random() * 3)],
+});
+
+const CrownSparkles = () => {
+  const [particles, setParticles] = useState<CrownParticle[]>(() =>
+    Array.from({ length: 6 }, makeParticle)
+  );
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      const p = makeParticle();
+      setParticles((prev) => [...prev.slice(-10), p]);
+    }, 320);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  return (
+    <div
+      className="pointer-events-none absolute"
+      style={{ top: -44, left: "50%", width: 0, height: 0, zIndex: 20 }}
+    >
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          style={{
+            position: "absolute",
+            left: `${p.x}px`,
+            top: 0,
+            width: p.size,
+            height: p.size,
+            marginLeft: -p.size / 2,
+            marginTop: -p.size / 2,
+            opacity: p.opacity,
+            ["--sx" as string]: `${p.sx}px`,
+            animation: `crown-sparkle-drift ${p.duration}ms cubic-bezier(0.25,0.46,0.45,0.94) forwards`,
+            filter: `drop-shadow(0 0 3px ${p.color})`,
+          }}
+        >
+          {p.shape === "star" && (
+            <svg viewBox="0 0 10 10" width={p.size} height={p.size}>
+              <polygon points="5,0 6,3.5 10,3.5 7,6 8,10 5,7.5 2,10 3,6 0,3.5 4,3.5" fill={p.color} />
+            </svg>
+          )}
+          {p.shape === "dot" && (
+            <div style={{ width: p.size, height: p.size, borderRadius: "50%", background: p.color }} />
+          )}
+          {p.shape === "diamond" && (
+            <div style={{ width: p.size, height: p.size, background: p.color, transform: "rotate(45deg)" }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const ProfilePage = () => {
   const [copiedId, setCopiedId] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -91,6 +175,7 @@ const ProfilePage = () => {
       >
         {/* Avatar + Crown */}
         <div className="relative flex flex-col items-center">
+          <CrownSparkles />
           {/* Rotating tilted golden crown */}
           <div
             style={{
