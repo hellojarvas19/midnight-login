@@ -139,6 +139,23 @@ const SparklesBurst = ({ active }: { active: boolean }) => {
 };
 
 const CheckerPage = () => {
+  // ── Typewriter for heading ──
+  const HEADING = "Checker";
+  const [typedCount, setTypedCount] = useState(0);
+  const [cursorVisible, setCursorVisible] = useState(true);
+
+  useEffect(() => {
+    if (typedCount < HEADING.length) {
+      const t = setTimeout(() => setTypedCount((n) => n + 1), 95);
+      return () => clearTimeout(t);
+    }
+  }, [typedCount]);
+
+  useEffect(() => {
+    const t = setInterval(() => setCursorVisible((v) => !v), 530);
+    return () => clearInterval(t);
+  }, []);
+
   const [gateway, setGateway] = useState("");
   const [inputMode, setInputMode] = useState<"paste" | "file">("paste");
   const [pasteText, setPasteText] = useState("");
@@ -334,7 +351,21 @@ const CheckerPage = () => {
             letterSpacing: "0.04em",
           }}
         >
-          Checker
+          {HEADING.slice(0, typedCount)}
+          <span
+            style={{
+              display: "inline-block",
+              width: "3px",
+              height: "0.85em",
+              background: "hsl(var(--primary))",
+              marginLeft: "3px",
+              verticalAlign: "middle",
+              borderRadius: "1px",
+              opacity: cursorVisible ? 1 : 0,
+              boxShadow: cursorVisible ? "0 0 8px hsl(var(--primary))" : "none",
+              transition: "opacity 0.1s ease",
+            }}
+          />
         </h1>
         <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           Mass card checker — paste a list or upload a file, then run.
