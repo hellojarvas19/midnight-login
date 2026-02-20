@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, Play, Loader2, CheckCircle2, XCircle, CreditCard, Trash2, FileText, ClipboardList, Copy, Download, Check, Shield, ShieldCheck, ShieldOff, Plus, X } from "lucide-react";
 import {
   Select,
@@ -65,6 +65,77 @@ const STATUS_CONFIG = {
   charged:  { label: "Charged",  color: "hsl(315,95%,70%)", bg: "hsla(315,80%,30%,0.2)", icon: "charge" },
   approved: { label: "Approved", color: "hsl(142,70%,55%)", bg: "hsla(142,60%,20%,0.25)", icon: "check" },
   declined: { label: "Declined", color: "hsl(0,75%,60%)",   bg: "hsla(0,65%,20%,0.25)",  icon: "x" },
+};
+
+/* ─── Sparkle Burst ─── */
+type Sparkle = { id: number; x: number; y: number; color: string; size: number; distance: number; duration: number; shape: "star" | "circle" | "diamond" };
+
+const SPARKLE_COLORS = [
+  "hsl(315,95%,70%)", "hsl(315,90%,80%)", "hsl(45,100%,65%)",
+  "hsl(142,70%,60%)", "hsl(200,90%,70%)", "hsl(0,0%,100%)",
+];
+
+const SparklesBurst = ({ active }: { active: boolean }) => {
+  const [sparkles, setSparkles] = useState<Sparkle[]>([]);
+  const prevActive = useRef(false);
+
+  useEffect(() => {
+    if (active && !prevActive.current) {
+      const burst: Sparkle[] = Array.from({ length: 28 }, (_, i) => ({
+        id: Date.now() + i,
+        x: Math.random() * 140 - 70,
+        y: Math.random() * 60 - 80,
+        color: SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
+        size: 6 + Math.random() * 9,
+        distance: 45 + Math.random() * 75,
+        duration: 550 + Math.random() * 500,
+        shape: (["star", "circle", "diamond"] as const)[Math.floor(Math.random() * 3)],
+      }));
+      setSparkles(burst);
+      setTimeout(() => setSparkles([]), 1200);
+    }
+    prevActive.current = active;
+  }, [active]);
+
+  if (sparkles.length === 0) return null;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-visible" style={{ zIndex: 50 }}>
+      {sparkles.map((s) => {
+        const tx = `translateX(${s.x}px)`;
+        const ty = `translateY(${s.y - s.distance}px)`;
+        return (
+          <div
+            key={s.id}
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: s.size,
+              height: s.size,
+              marginLeft: -s.size / 2,
+              marginTop: -s.size / 2,
+              ["--tx" as string]: tx,
+              ["--ty" as string]: ty,
+              animation: `sparkle-fly ${s.duration}ms cubic-bezier(0.22,1,0.36,1) forwards`,
+            }}
+          >
+            {s.shape === "star" && (
+              <svg viewBox="0 0 10 10" width={s.size} height={s.size} style={{ filter: `drop-shadow(0 0 3px ${s.color})` }}>
+                <polygon points="5,0 6,4 10,4 7,6 8,10 5,7 2,10 3,6 0,4 4,4" fill={s.color} />
+              </svg>
+            )}
+            {s.shape === "circle" && (
+              <div style={{ width: s.size, height: s.size, borderRadius: "50%", background: s.color, boxShadow: `0 0 6px ${s.color}` }} />
+            )}
+            {s.shape === "diamond" && (
+              <div style={{ width: s.size, height: s.size, background: s.color, transform: "rotate(45deg)", boxShadow: `0 0 6px ${s.color}` }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 const CheckerPage = () => {
@@ -609,31 +680,34 @@ const CheckerPage = () => {
 
         {/* Action buttons */}
         <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={isRunning ? handleStop : handleRun}
-            disabled={!gateway || validCount === 0}
-            className="btn-shimmer flex-1 flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
-            style={{
-              background: isRunning
-                ? "linear-gradient(135deg, hsl(0,75%,40%), hsl(0,70%,50%))"
-                : "linear-gradient(135deg, hsl(315,95%,45%), hsl(315,90%,55%))",
-              color: "hsl(var(--primary-foreground))",
-              boxShadow: isRunning
-                ? "0 4px 24px hsla(0,75%,50%,0.4)"
-                : "0 4px 24px hsla(315,90%,50%,0.45), 0 0 60px hsla(315,80%,45%,0.15)",
-              border: isRunning
-                ? "1px solid hsla(0,75%,60%,0.3)"
-                : "1px solid hsla(315,80%,60%,0.3)",
-              animation: !isRunning && gateway && validCount > 0 ? "pulse-glow 3s ease-in-out infinite" : "none",
-            }}
-          >
-            {isRunning ? (
-              <><Loader2 size={15} className="animate-spin" /> Stop</>
-            ) : (
-              <><Play size={15} /> Run {validCount > 0 ? `${validCount} Valid` : "Mass"} Check</>
-            )}
-          </button>
+          <div className="relative flex-1">
+            <SparklesBurst active={isDone && (stats.approved + stats.charged) > 0} />
+            <button
+              type="button"
+              onClick={isRunning ? handleStop : handleRun}
+              disabled={!gateway || validCount === 0}
+              className="btn-shimmer w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+              style={{
+                background: isRunning
+                  ? "linear-gradient(135deg, hsl(0,75%,40%), hsl(0,70%,50%))"
+                  : "linear-gradient(135deg, hsl(315,95%,45%), hsl(315,90%,55%))",
+                color: "hsl(var(--primary-foreground))",
+                boxShadow: isRunning
+                  ? "0 4px 24px hsla(0,75%,50%,0.4)"
+                  : "0 4px 24px hsla(315,90%,50%,0.45), 0 0 60px hsla(315,80%,45%,0.15)",
+                border: isRunning
+                  ? "1px solid hsla(0,75%,60%,0.3)"
+                  : "1px solid hsla(315,80%,60%,0.3)",
+                animation: !isRunning && gateway && validCount > 0 ? "pulse-glow 3s ease-in-out infinite" : "none",
+              }}
+            >
+              {isRunning ? (
+                <><Loader2 size={15} className="animate-spin" /> Stop</>
+              ) : (
+                <><Play size={15} /> Run {validCount > 0 ? `${validCount} Valid` : "Mass"} Check</>
+              )}
+            </button>
+          </div>
 
           {cards.length > 0 && !isRunning && (
             <button
