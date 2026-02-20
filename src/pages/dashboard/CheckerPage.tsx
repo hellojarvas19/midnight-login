@@ -13,12 +13,30 @@ type CardResult = {
   card: string;
   expiry: string;
   cvv: string;
+  luhnValid: boolean;
   status: "pending" | "checking" | "charged" | "approved" | "declined";
+};
+
+/** Luhn algorithm — returns true if the card number passes the check */
+const luhnCheck = (num: string): boolean => {
+  const digits = num.replace(/\D/g, "");
+  if (digits.length < 13 || digits.length > 19) return false;
+  let sum = 0;
+  let isEven = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let d = parseInt(digits[i], 10);
+    if (isEven) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+    isEven = !isEven;
+  }
+  return sum % 10 === 0;
 };
 
 const parseCardLine = (line: string): { card: string; expiry: string; cvv: string } => {
   const clean = line.trim();
-  // Support formats: 4111111111111111|12/26|123 or 4111|12/26|123 or 4111:12/26:123
   const sep = clean.includes("|") ? "|" : clean.includes(":") ? ":" : " ";
   const parts = clean.split(sep).map((p) => p.trim());
   return {
@@ -60,9 +78,10 @@ const CheckerPage = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef(false);
 
-  const isDone = cards.length > 0 && !isRunning && cards.every(
-    (c) => c.status === "approved" || c.status === "charged" || c.status === "declined"
-  );
+  const isDone = cards.length > 0 && !isRunning && cards
+    .filter((c) => c.luhnValid)
+    .every((c) => c.status === "approved" || c.status === "charged" || c.status === "declined")
+    && cards.some((c) => c.luhnValid);
 
   const buildExportText = () =>
     cards
@@ -97,7 +116,7 @@ const CheckerPage = () => {
       .filter((l) => l.length > 8)
       .map((l) => {
         const { card, expiry, cvv } = parseCardLine(l);
-        return { raw: l, card, expiry, cvv, status: "pending" as const };
+        return { raw: l, card, expiry, cvv, luhnValid: luhnCheck(card), status: "pending" as const };
       });
 
   const loadFile = (file: File) => {
@@ -131,15 +150,18 @@ const CheckerPage = () => {
   };
 
   const handleRun = async () => {
-    if (!gateway || cards.length === 0) return;
+    const validCards = cards.filter((c) => c.luhnValid);
+    if (!gateway || validCards.length === 0) return;
     abortRef.current = false;
     setIsRunning(true);
 
-  const updated: CardResult[] = cards.map((c) => ({ ...c, status: "pending" as CardResult["status"] }));
+    const updated: CardResult[] = cards.map((c) => ({ ...c, status: "pending" as CardResult["status"] }));
     setCards([...updated]);
 
     for (let i = 0; i < updated.length; i++) {
       if (abortRef.current) break;
+      // Skip cards that fail Luhn — leave them as "pending" visually
+      if (!updated[i].luhnValid) continue;
       updated[i] = { ...updated[i], status: "checking" as CardResult["status"] };
       setCards([...updated]);
 
@@ -166,6 +188,9 @@ const CheckerPage = () => {
     setPasteText("");
   };
 
+  const invalidCount = cards.filter((c) => !c.luhnValid).length;
+  const validCount = cards.filter((c) => c.luhnValid).length;
+
   const stats = {
     total: cards.length,
     approved: cards.filter((c) => c.status === "approved").length,
@@ -174,10 +199,10 @@ const CheckerPage = () => {
     pending: cards.filter((c) => c.status === "pending" || c.status === "checking").length,
   };
 
-  const progress = cards.length
+  const progress = validCount
     ? Math.round(
-        (cards.filter((c) => ["approved", "charged", "declined"].includes(c.status)).length /
-          cards.length) *
+        (cards.filter((c) => c.luhnValid && ["approved", "charged", "declined"].includes(c.status)).length /
+          validCount) *
           100
       )
     : 0;
@@ -374,7 +399,7 @@ const CheckerPage = () => {
           <button
             type="button"
             onClick={isRunning ? handleStop : handleRun}
-            disabled={!gateway || cards.length === 0}
+            disabled={!gateway || validCount === 0}
             className="btn-shimmer flex-1 flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
             style={{
               background: isRunning
@@ -392,7 +417,7 @@ const CheckerPage = () => {
             {isRunning ? (
               <><Loader2 size={15} className="animate-spin" /> Stop</>
             ) : (
-              <><Play size={15} /> Run Mass Check</>
+              <><Play size={15} /> Run {validCount > 0 ? `${validCount} Valid` : "Mass"} Check</>
             )}
           </button>
 
@@ -412,6 +437,25 @@ const CheckerPage = () => {
           )}
         </div>
       </div>
+
+      {/* Luhn warning banner */}
+      {cards.length > 0 && invalidCount > 0 && !isRunning && (
+        <div
+          className="animate-card-entrance rounded-xl px-4 py-3 flex items-center gap-3"
+          style={{
+            animationDelay: "80ms",
+            animationFillMode: "both",
+            background: "hsla(0,65%,20%,0.25)",
+            border: "1px solid hsla(0,75%,55%,0.3)",
+          }}
+        >
+          <XCircle size={15} style={{ color: "hsl(0,75%,60%)", flexShrink: 0 }} />
+          <p className="text-xs font-semibold" style={{ color: "hsl(0,75%,65%)" }}>
+            <span className="font-black">{invalidCount}</span> card{invalidCount !== 1 ? "s" : ""} failed Luhn validation and will be skipped.
+            {validCount === 0 && " No valid cards to check."}
+          </p>
+        </div>
+      )}
 
       {/* Progress + Stats (shown when cards loaded) */}
       {cards.length > 0 && (
@@ -528,34 +572,50 @@ const CheckerPage = () => {
           <div className="flex flex-col divide-y" style={{ maxHeight: 420, overflowY: "auto" }}>
             {cards.map((c, i) => {
               const cfg = STATUS_CONFIG[c.status];
+              const isInvalid = !c.luhnValid;
               return (
                 <div
                   key={i}
                   className="flex items-center gap-3 px-5 py-3 transition-all duration-300"
-                  style={{ background: c.status !== "pending" ? cfg.bg : "transparent" }}
+                  style={{
+                    background: isInvalid
+                      ? "hsla(0,60%,15%,0.35)"
+                      : c.status !== "pending"
+                      ? cfg.bg
+                      : "transparent",
+                    borderLeft: isInvalid
+                      ? "3px solid hsla(0,75%,55%,0.7)"
+                      : "3px solid transparent",
+                  }}
                 >
                   {/* Icon */}
                   <div className="shrink-0">
-                    {c.status === "checking" && (
+                    {isInvalid && (
+                      <XCircle size={16} style={{ color: "hsl(0,75%,60%)", filter: "drop-shadow(0 0 4px hsla(0,75%,55%,0.5))" }} />
+                    )}
+                    {!isInvalid && c.status === "checking" && (
                       <Loader2 size={16} className="animate-spin" style={{ color: "hsl(315,95%,65%)" }} />
                     )}
-                    {c.status === "approved" && (
+                    {!isInvalid && c.status === "approved" && (
                       <CheckCircle2 size={16} style={{ color: "hsl(142,70%,55%)", filter: "drop-shadow(0 0 4px hsla(142,70%,55%,0.6))" }} />
                     )}
-                    {c.status === "charged" && (
+                    {!isInvalid && c.status === "charged" && (
                       <CreditCard size={16} style={{ color: "hsl(315,95%,65%)", filter: "drop-shadow(0 0 4px hsla(315,90%,60%,0.6))" }} />
                     )}
-                    {c.status === "declined" && (
+                    {!isInvalid && c.status === "declined" && (
                       <XCircle size={16} style={{ color: "hsl(0,75%,60%)", filter: "drop-shadow(0 0 4px hsla(0,75%,55%,0.6))" }} />
                     )}
-                    {c.status === "pending" && (
+                    {!isInvalid && c.status === "pending" && (
                       <div className="w-4 h-4 rounded-full" style={{ background: "hsla(315,30%,30%,0.4)", border: "1px solid hsla(315,30%,40%,0.3)" }} />
                     )}
                   </div>
 
                   {/* Card info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono font-medium truncate" style={{ color: "hsl(var(--foreground))" }}>
+                    <p
+                      className="text-sm font-mono font-medium truncate"
+                      style={{ color: isInvalid ? "hsl(0,75%,65%)" : "hsl(var(--foreground))" }}
+                    >
                       {maskCard(c.card)}
                     </p>
                     {c.expiry && (
@@ -566,17 +626,31 @@ const CheckerPage = () => {
                   </div>
 
                   {/* Status badge */}
-                  <span
-                    className="shrink-0 text-xs font-black uppercase px-2.5 py-1 rounded-full"
-                    style={{
-                      color: cfg.color,
-                      background: cfg.bg,
-                      border: `1px solid ${cfg.color}44`,
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    {cfg.label}
-                  </span>
+                  {isInvalid ? (
+                    <span
+                      className="shrink-0 text-xs font-black uppercase px-2.5 py-1 rounded-full"
+                      style={{
+                        color: "hsl(0,75%,65%)",
+                        background: "hsla(0,65%,20%,0.4)",
+                        border: "1px solid hsla(0,75%,55%,0.4)",
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      Invalid
+                    </span>
+                  ) : (
+                    <span
+                      className="shrink-0 text-xs font-black uppercase px-2.5 py-1 rounded-full"
+                      style={{
+                        color: cfg.color,
+                        background: cfg.bg,
+                        border: `1px solid ${cfg.color}44`,
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      {cfg.label}
+                    </span>
+                  )}
                 </div>
               );
             })}
