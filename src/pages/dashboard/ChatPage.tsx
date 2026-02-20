@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   MessageCircle, Send, Image as ImageIcon, Mic,
   Pin, X, Play, Pause, MoreVertical, Check, CheckCheck,
-  Crown, Reply, Search, ChevronUp, ChevronDown, Trash2,
+  Crown, Reply, Search, ChevronUp, ChevronDown, Trash2, Pencil,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -30,6 +30,7 @@ interface ChatMessage {
   timestamp: Date;
   pinned?: boolean;
   deleted?: boolean;
+  edited?: boolean;
   imagePreview?: string;
   reactions: Partial<Record<Emoji, number>>;
   myReaction?: Emoji;
@@ -335,7 +336,7 @@ const PinnedBanner = ({ message, onJump }: { message: ChatMessage; onJump: () =>
 
 /* ─── Message bubble ─── */
 const MessageBubble = ({
-  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, onDelete, pinnedRef, searchQuery = "",
+  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, onDelete, onEdit, pinnedRef, searchQuery = "",
 }: {
   msg: ChatMessage;
   isOwn: boolean;
@@ -346,11 +347,15 @@ const MessageBubble = ({
   onReply: (msg: ChatMessage) => void;
   onScrollTo: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit: (id: string, newContent: string) => void;
   pinnedRef?: (el: HTMLDivElement | null) => void;
   searchQuery?: string;
 }) => {
   const [menuOpen, setMenuOpen]           = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [isEditing, setIsEditing]         = useState(false);
+  const [editDraft, setEditDraft]         = useState("");
+  const editRef = useRef<HTMLTextAreaElement | null>(null);
   const longPressTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pickerRef       = useRef<HTMLDivElement | null>(null);
   const hoverLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -379,6 +384,22 @@ const MessageBubble = ({
   };
 
   const handleReact = (emoji: Emoji) => { onReact(msg.id, emoji); setPickerVisible(false); };
+
+  const openEdit = () => {
+    setEditDraft(msg.content);
+    setIsEditing(true);
+    setMenuOpen(false);
+    setTimeout(() => {
+      editRef.current?.focus();
+      editRef.current?.setSelectionRange(msg.content.length, msg.content.length);
+    }, 30);
+  };
+  const saveEdit = () => {
+    const trimmed = editDraft.trim();
+    if (trimmed && trimmed !== msg.content) onEdit(msg.id, trimmed);
+    setIsEditing(false);
+  };
+  const cancelEdit = () => setIsEditing(false);
 
   const bubbleBg     = isOwn ? "hsla(315,80%,38%,0.35)" : "hsla(330,18%,8%,0.75)";
   const bubbleBorder = isOwn ? "hsla(315,60%,55%,0.30)"  : "hsla(315,30%,25%,0.22)";
@@ -457,6 +478,45 @@ const MessageBubble = ({
               <p className="text-sm italic" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.55 }}>
                 🗑️ Message deleted
               </p>
+            ) : isEditing && msg.type === "text" ? (
+              /* ── Inline edit mode ── */
+              <div className="flex flex-col gap-2" style={{ animation: "reply-slide-in 0.2s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+                <textarea
+                  ref={editRef}
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+                    if (e.key === "Escape") cancelEdit();
+                  }}
+                  rows={2}
+                  className="w-full resize-none rounded-xl px-3 py-2 text-sm leading-relaxed outline-none"
+                  style={{
+                    background: "hsla(330,20%,4%,0.85)",
+                    border: "1px solid hsla(315,70%,55%,0.5)",
+                    color: "hsl(var(--foreground))",
+                    fontFamily: "inherit",
+                    boxShadow: "0 0 0 3px hsla(315,80%,55%,0.12)",
+                  }}
+                />
+                <div className={`flex gap-1.5 ${isOwn ? "justify-end" : "justify-start"}`}>
+                  <button
+                    onClick={saveEdit}
+                    disabled={!editDraft.trim()}
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all active:scale-95 disabled:opacity-30"
+                    style={{ background: "linear-gradient(135deg, hsl(315,95%,45%), hsl(315,85%,58%))", color: "#fff", boxShadow: "0 0 10px hsla(315,90%,55%,0.35)" }}
+                  >
+                    <Check size={11} /> Save
+                  </button>
+                  <button
+                    onClick={cancelEdit}
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all active:scale-95"
+                    style={{ background: "hsla(330,15%,12%,0.8)", color: "hsl(var(--muted-foreground))", border: "1px solid hsla(315,25%,25%,0.3)" }}
+                  >
+                    <X size={11} /> Cancel
+                  </button>
+                </div>
+              </div>
             ) : (
               <>
                 {msg.type === "text" && (
@@ -526,6 +586,17 @@ const MessageBubble = ({
                 )
               )}
 
+              {/* Edit (text messages only, not deleted) */}
+              {msg.type === "text" && !msg.deleted && (
+                <button
+                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors"
+                  style={{ color: "hsl(44,100%,65%)" }}
+                  onClick={openEdit}
+                >
+                  <Pencil size={12} /> Edit
+                </button>
+              )}
+
               {/* Delete */}
               <button
                 className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors"
@@ -549,8 +620,11 @@ const MessageBubble = ({
         {/* Reaction pills */}
         <ReactionPills reactions={msg.reactions} myReaction={msg.myReaction} isOwn={isOwn} onPick={(e) => onReact(msg.id, e)} />
 
-        {/* Timestamp */}
-        <div className="flex items-center gap-1 px-1">
+        {/* Timestamp + edited label */}
+        <div className="flex items-center gap-1.5 px-1">
+          {msg.edited && !msg.deleted && (
+            <span className="text-xs italic" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.5 }}>edited</span>
+          )}
           <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.55 }}>
             {timeAgo(msg.timestamp)}
           </span>
@@ -731,7 +805,6 @@ const SearchBar = ({
     </button>
   </div>
 );
-
 
 const ChatPage = () => {
   const [messages, setMessages]           = useState<ChatMessage[]>(SEED);
@@ -925,6 +998,13 @@ const ChatPage = () => {
     }, 350);
   }, []);
 
+  /* Edit */
+  const editMessage = useCallback((id: string, newContent: string) => {
+    setMessages((prev) =>
+      prev.map((m) => m.id === id ? { ...m, content: newContent, edited: true } : m)
+    );
+  }, []);
+
   /* React */
   const reactToMessage = useCallback((msgId: string, emoji: Emoji) => {
     setMessages((prev) =>
@@ -1056,6 +1136,7 @@ const ChatPage = () => {
                   onReply={setReplyTarget}
                   onScrollTo={scrollToMessage}
                   onDelete={deleteMessage}
+                  onEdit={editMessage}
                   searchQuery={searchOpen ? searchQuery : ""}
                 />
               </div>
