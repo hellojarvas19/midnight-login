@@ -4,12 +4,14 @@ import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import HomePage from "@/pages/dashboard/HomePage";
 import CheckerPage from "@/pages/dashboard/CheckerPage";
+import ProfilePage from "@/pages/dashboard/ProfilePage";
 
-type Section = "home" | "checker";
+type Section = "home" | "checker" | "profile";
 
 const SECTION_TITLE: Record<Section, string> = {
-  home: "Home",
+  home:    "Home",
   checker: "Checker",
+  profile: "Profile",
 };
 
 const Dashboard = () => {
@@ -113,8 +115,9 @@ const Dashboard = () => {
 
         {/* Page content */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {active === "home" && <HomePage />}
+          {active === "home"    && <HomePage />}
           {active === "checker" && <CheckerPage />}
+          {active === "profile" && <ProfilePage />}
         </main>
 
         {/* Footer */}
