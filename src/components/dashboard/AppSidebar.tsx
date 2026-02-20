@@ -75,16 +75,24 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
               style={{
                 justifyContent: collapsed ? "center" : "flex-start",
                 background: isActive
-                  ? "linear-gradient(135deg, hsla(315, 80%, 45%, 0.35), hsla(315, 70%, 35%, 0.2))"
+                  ? id === "profile"
+                    ? "linear-gradient(135deg, hsla(45, 90%, 45%, 0.28), hsla(45, 80%, 35%, 0.15))"
+                    : "linear-gradient(135deg, hsla(315, 80%, 45%, 0.35), hsla(315, 70%, 35%, 0.2))"
                   : "transparent",
                 color: isActive
-                  ? "hsl(var(--primary))"
+                  ? id === "profile"
+                    ? "hsl(45, 100%, 68%)"
+                    : "hsl(var(--primary))"
                   : "hsl(var(--sidebar-foreground))",
                 boxShadow: isActive
-                  ? "0 0 20px hsla(315, 90%, 55%, 0.35), inset 0 0 0 1px hsla(315, 80%, 55%, 0.25)"
+                  ? id === "profile"
+                    ? "0 0 20px hsla(45, 90%, 55%, 0.30), inset 0 0 0 1px hsla(45, 90%, 55%, 0.22)"
+                    : "0 0 20px hsla(315, 90%, 55%, 0.35), inset 0 0 0 1px hsla(315, 80%, 55%, 0.25)"
                   : "none",
                 border: isActive
-                  ? "1px solid hsla(315, 70%, 50%, 0.3)"
+                  ? id === "profile"
+                    ? "1px solid hsla(45, 85%, 55%, 0.35)"
+                    : "1px solid hsla(315, 70%, 50%, 0.3)"
                   : "1px solid transparent",
                 transition: "all 0.2s ease, box-shadow 0.25s ease",
               }}
