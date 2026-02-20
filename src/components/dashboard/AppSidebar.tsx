@@ -1,4 +1,4 @@
-import { Home, CreditCard, ChevronLeft, ChevronRight, UserCircle } from "lucide-react";
+import { Home, CreditCard, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 
 type Section = "home" | "checker" | "profile";
@@ -13,7 +13,7 @@ interface AppSidebarProps {
 const NAV_ITEMS: { id: Section; label: string; Icon: typeof Home }[] = [
   { id: "home",    label: "Home",    Icon: Home        },
   { id: "checker", label: "Checker", Icon: CreditCard  },
-  { id: "profile", label: "Profile", Icon: UserCircle  },
+  { id: "profile", label: "Profile", Icon: Crown       },
 ];
 
 const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSidebarProps) => {
