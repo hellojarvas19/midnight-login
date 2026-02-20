@@ -1,23 +1,28 @@
 import { useRef, useCallback } from "react";
 import { Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { LogoMark } from "./LogoMark";
 
 /* ─── Telegram button ─── */
-const TelegramButton = () => (
-  <button
-    type="button"
-    className="btn-shimmer w-full flex items-center justify-center gap-3 rounded-xl py-4 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-    style={{
-      background: "linear-gradient(135deg, hsl(200,100%,40%), hsl(200,100%,50%))",
-      color: "hsl(0,0%,100%)",
-      boxShadow: "0 4px 32px hsla(200,100%,45%,0.45), 0 0 80px hsla(200,100%,45%,0.15)",
-      border: "1px solid hsla(200,100%,60%,0.25)",
-    }}
-  >
-    <Send size={18} />
-    Continue with Telegram
-  </button>
-);
+const TelegramButton = () => {
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      onClick={() => navigate("/dashboard")}
+      className="btn-shimmer w-full flex items-center justify-center gap-3 rounded-xl py-4 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+      style={{
+        background: "linear-gradient(135deg, hsl(200,100%,40%), hsl(200,100%,50%))",
+        color: "hsl(0,0%,100%)",
+        boxShadow: "0 4px 32px hsla(200,100%,45%,0.45), 0 0 80px hsla(200,100%,45%,0.15)",
+        border: "1px solid hsla(200,100%,60%,0.25)",
+      }}
+    >
+      <Send size={18} />
+      Continue with Telegram
+    </button>
+  );
+};
 
 /* ─── Main auth card ─── */
 const AuthCard = () => {
