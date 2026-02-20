@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Upload, Play, Loader2, CheckCircle2, XCircle, CreditCard, Trash2, FileText, ClipboardList, Copy, Download, Check } from "lucide-react";
+import { Upload, Play, Loader2, CheckCircle2, XCircle, CreditCard, Trash2, FileText, ClipboardList, Copy, Download, Check, Shield, ShieldCheck, ShieldOff, Plus, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -75,8 +75,11 @@ const CheckerPage = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [proxyOpen, setProxyOpen] = useState(false);
+  const [proxyValue, setProxyValue] = useState("");
+  const [proxyActive, setProxyActive] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef(false);
+  const abortRef = useRef<boolean>(false);
 
   const isDone = cards.length > 0 && !isRunning && cards
     .filter((c) => c.luhnValid)
@@ -278,7 +281,144 @@ const CheckerPage = () => {
           </Select>
         </div>
 
+        {/* ── Proxy ── */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label
+              className="text-xs font-semibold uppercase tracking-wider"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
+              Proxy
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                if (proxyOpen && proxyValue.trim()) {
+                  // toggle active when closing with a value set
+                  setProxyActive((v) => !v);
+                } else {
+                  setProxyOpen((o) => !o);
+                }
+              }}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-300 hover:scale-105 active:scale-95"
+              style={{
+                background: proxyActive
+                  ? "linear-gradient(135deg, hsl(142,65%,28%), hsl(142,60%,38%))"
+                  : proxyOpen
+                  ? "hsla(315,40%,15%,0.7)"
+                  : "hsla(315,30%,12%,0.6)",
+                color: proxyActive
+                  ? "hsl(142,70%,65%)"
+                  : proxyOpen
+                  ? "hsl(var(--primary))"
+                  : "hsl(var(--muted-foreground))",
+                border: proxyActive
+                  ? "1px solid hsla(142,60%,45%,0.45)"
+                  : proxyOpen
+                  ? "1px solid hsla(315,70%,55%,0.35)"
+                  : "1px solid hsla(315,25%,30%,0.2)",
+                boxShadow: proxyActive
+                  ? "0 0 14px hsla(142,60%,40%,0.3)"
+                  : proxyOpen
+                  ? "0 0 10px hsla(315,80%,50%,0.2)"
+                  : "none",
+              }}
+            >
+              {proxyActive ? (
+                <><ShieldCheck size={12} /> Proxy ON</>
+              ) : proxyOpen ? (
+                <><X size={12} /> Cancel</>
+              ) : (
+                <><Plus size={12} /> Add Proxy</>
+              )}
+            </button>
+          </div>
+
+          {/* Animated proxy input panel */}
+          <div
+            style={{
+              maxHeight: proxyOpen ? "120px" : "0px",
+              opacity: proxyOpen ? 1 : 0,
+              overflow: "hidden",
+              transition: "max-height 0.35s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease",
+            }}
+          >
+            <div className="flex flex-col gap-2 pt-1">
+              <input
+                type="text"
+                value={proxyValue}
+                onChange={(e) => setProxyValue(e.target.value)}
+                placeholder="ip:port  or  ip:port:user:pass"
+                className="glass-input rounded-xl px-4 py-3 text-sm font-mono w-full"
+                style={{ color: "hsl(var(--foreground))" }}
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={!proxyValue.trim()}
+                  onClick={() => {
+                    if (!proxyValue.trim()) return;
+                    setProxyActive(true);
+                    setProxyOpen(false);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(142,65%,28%), hsl(142,58%,38%))",
+                    color: "hsl(var(--primary-foreground))",
+                    border: "1px solid hsla(142,60%,50%,0.35)",
+                    boxShadow: proxyValue.trim()
+                      ? "0 2px 14px hsla(142,60%,35%,0.4), 0 0 24px hsla(142,55%,30%,0.2)"
+                      : "none",
+                  }}
+                >
+                  <ShieldCheck size={12} /> Enable Proxy
+                </button>
+                {proxyActive && (
+                  <button
+                    type="button"
+                    onClick={() => { setProxyActive(false); setProxyValue(""); setProxyOpen(false); }}
+                    className="flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all duration-200 hover:scale-[1.02]"
+                    style={{
+                      background: "hsla(0,60%,15%,0.4)",
+                      color: "hsl(0,75%,65%)",
+                      border: "1px solid hsla(0,65%,40%,0.3)",
+                    }}
+                  >
+                    <ShieldOff size={12} /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Active proxy indicator */}
+          {proxyActive && !proxyOpen && (
+            <div
+              className="flex items-center gap-2 rounded-xl px-3 py-2"
+              style={{
+                background: "hsla(142,55%,15%,0.3)",
+                border: "1px solid hsla(142,60%,40%,0.3)",
+                boxShadow: "0 0 12px hsla(142,55%,30%,0.15)",
+              }}
+            >
+              <ShieldCheck size={13} style={{ color: "hsl(142,70%,55%)", flexShrink: 0, filter: "drop-shadow(0 0 4px hsla(142,70%,50%,0.5))" }} />
+              <span className="text-xs font-mono flex-1 truncate" style={{ color: "hsl(142,65%,60%)" }}>
+                {proxyValue}
+              </span>
+              <button
+                type="button"
+                onClick={() => { setProxyActive(false); setProxyValue(""); }}
+                className="shrink-0 transition-opacity hover:opacity-70"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Mode tabs */}
+
         <div className="flex gap-2">
           {(["paste", "file"] as const).map((mode) => (
             <button
