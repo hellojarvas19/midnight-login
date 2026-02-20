@@ -298,15 +298,6 @@ const AuthCard = () => {
     >
       {/* Logo / brand */}
       <div className="text-center mb-8">
-        <div
-          className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
-          style={{
-            background: "linear-gradient(135deg, hsl(315,90%,52%), hsl(340,80%,40%))",
-            boxShadow: "0 0 36px hsla(315,90%,58%,0.6)",
-          }}
-        >
-          <span className="text-2xl font-black text-white">S</span>
-        </div>
         <h1
           className="text-2xl font-extrabold tracking-tight text-glow"
           style={{ color: "hsl(var(--foreground))" }}
