@@ -72,7 +72,7 @@ const AuthCard = () => {
           0xAdam
         </h1>
         <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-          Chk
+          Welcome To 0xAdam Checker
         </p>
       </div>
 
