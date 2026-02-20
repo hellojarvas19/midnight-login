@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Menu, ChevronRight, Home, CreditCard, Crown } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
@@ -27,13 +27,20 @@ const SWIPE_THRESHOLD = 60; // px leftward to trigger close
 // Transition states
 type TransitionPhase = "idle" | "exit" | "enter";
 
+const PAGE_NODE: Record<Section, React.ReactNode> = {
+  home:    <HomePage />,
+  checker: <CheckerPage />,
+  profile: <ProfilePage />,
+};
+
 const Dashboard = () => {
   const [active, setActive]                   = useState<Section>("home");
   const [collapsed, setCollapsed]             = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [pageKey, setPageKey]                 = useState(0);
   const [phase, setPhase]                     = useState<TransitionPhase>("idle");
-  const [direction, setDirection]             = useState<1 | -1>(1); // 1 = forward, -1 = backward
+  const [direction, setDirection]             = useState<1 | -1>(1);
+  const [exitContent, setExitContent]         = useState<React.ReactNode>(null);
   const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Swipe-to-close state
@@ -46,16 +53,21 @@ const Dashboard = () => {
     const fromIdx = SECTION_ORDER.indexOf(active);
     const toIdx   = SECTION_ORDER.indexOf(section);
     const dir: 1 | -1 = toIdx > fromIdx ? 1 : -1;
+
+    // Snapshot the leaving page so we can animate it out as a ghost
+    setExitContent(PAGE_NODE[active]);
     setDirection(dir);
     setPhase("exit");
+
     if (transitionRef.current) clearTimeout(transitionRef.current);
     transitionRef.current = setTimeout(() => {
       setActive(section);
       setPageKey((k) => k + 1);
       setPhase("enter");
+      setExitContent(null);
       // After enter animation completes, go idle
-      transitionRef.current = setTimeout(() => setPhase("idle"), 300);
-    }, 200);
+      transitionRef.current = setTimeout(() => setPhase("idle"), 350);
+    }, 220);
   };
 
   /* ── Touch handlers ── */
@@ -237,20 +249,36 @@ const Dashboard = () => {
         </header>
 
         {/* Page content — directional slide transition */}
-        <main className="flex-1 px-4 py-5 md:p-6 overflow-y-auto">
+        <main className="relative flex-1 px-4 py-5 md:p-6 overflow-y-auto overflow-x-hidden">
+          {/* Exit ghost: absolute overlay that plays the exit animation before unmounting */}
+          {phase === "exit" && exitContent && (
+            <div
+              key={`exit-${pageKey}`}
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                padding: "inherit",
+                pointerEvents: "none",
+                willChange: "opacity, transform, filter",
+                animation: direction === 1
+                  ? "page-exit-forward  0.22s cubic-bezier(0.4,0,1,1) both"
+                  : "page-exit-backward 0.22s cubic-bezier(0.4,0,1,1) both",
+              }}
+            >
+              {exitContent}
+            </div>
+          )}
+          {/* Entering page */}
           <div
             key={pageKey}
             style={{
-              opacity:   phase === "exit" ? 0 : 1,
-              transform: phase === "exit"
-                ? `translateX(${direction * -40}px)`
-                : phase === "enter"
-                  ? `translateX(${direction * 32}px)`
-                  : "translateX(0)",
-              transition: phase === "enter"
-                ? "opacity 0.28s cubic-bezier(0.22,1,0.36,1), transform 0.28s cubic-bezier(0.22,1,0.36,1)"
-                : "opacity 0.18s ease, transform 0.18s ease",
-              willChange: "opacity, transform",
+              willChange: "opacity, transform, filter",
+              animation: phase !== "idle"
+                ? direction === 1
+                  ? "page-enter-forward  0.32s cubic-bezier(0.22,1,0.36,1) both"
+                  : "page-enter-backward 0.32s cubic-bezier(0.22,1,0.36,1) both"
+                : undefined,
             }}
           >
             {active === "home"    && <HomePage />}
