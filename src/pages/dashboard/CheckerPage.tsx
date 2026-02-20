@@ -83,28 +83,32 @@ const CheckerPage = () => {
     .every((c) => c.status === "approved" || c.status === "charged" || c.status === "declined")
     && cards.some((c) => c.luhnValid);
 
-  const buildExportText = () =>
-    cards
+  const approvedAndCharged = cards.filter(
+    (c) => c.status === "approved" || c.status === "charged"
+  );
+
+  const buildExportText = (subset: CardResult[]) =>
+    subset
       .map((c) => `${c.card}|${c.expiry}|${c.cvv}|${c.status.toUpperCase()}`)
       .join("\n");
 
   const handleCopyResults = async () => {
     try {
-      await navigator.clipboard.writeText(buildExportText());
+      await navigator.clipboard.writeText(buildExportText(approvedAndCharged));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback: select a textarea
+      // fallback
     }
   };
 
   const handleDownloadResults = () => {
-    const text = buildExportText();
+    const text = buildExportText(approvedAndCharged);
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `checker-results-${Date.now()}.txt`;
+    a.download = `approved-charged-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -531,40 +535,56 @@ const CheckerPage = () => {
 
             {/* Export buttons — only shown when check is complete */}
             {isDone && (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCopyResults}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-                  style={{
-                    background: copied
-                      ? "hsla(142,60%,20%,0.4)"
-                      : "hsla(315,40%,15%,0.6)",
-                    color: copied ? "hsl(142,70%,60%)" : "hsl(var(--foreground))",
-                    border: copied
-                      ? "1px solid hsla(142,60%,45%,0.4)"
-                      : "1px solid hsla(315,35%,35%,0.25)",
-                    boxShadow: copied ? "0 0 12px hsla(142,60%,40%,0.2)" : "none",
-                  }}
-                  title="Copy results to clipboard"
+              <div className="flex flex-col items-end gap-1.5">
+                <span
+                  className="text-xs font-semibold"
+                  style={{ color: "hsl(142,70%,55%)" }}
                 >
-                  {copied ? <Check size={12} /> : <Copy size={12} />}
-                  {copied ? "Copied!" : "Copy"}
-                </button>
+                  {approvedAndCharged.length} approved/charged
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCopyResults}
+                    disabled={approvedAndCharged.length === 0}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    style={{
+                      background: copied
+                        ? "hsla(142,60%,20%,0.5)"
+                        : "hsla(142,50%,15%,0.5)",
+                      color: copied ? "hsl(142,70%,65%)" : "hsl(142,70%,60%)",
+                      border: copied
+                        ? "1px solid hsla(142,60%,50%,0.5)"
+                        : "1px solid hsla(142,60%,40%,0.35)",
+                      boxShadow: copied
+                        ? "0 0 14px hsla(142,60%,40%,0.35)"
+                        : "0 0 8px hsla(142,60%,30%,0.2)",
+                    }}
+                    title="Copy approved & charged cards to clipboard"
+                  >
+                    {copied ? <Check size={12} /> : <Copy size={12} />}
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
 
-                <button
-                  onClick={handleDownloadResults}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-                  style={{
-                    background: "linear-gradient(135deg, hsl(315,95%,38%), hsl(315,85%,48%))",
-                    color: "hsl(var(--primary-foreground))",
-                    border: "1px solid hsla(315,80%,55%,0.3)",
-                    boxShadow: "0 2px 12px hsla(315,90%,50%,0.3)",
-                  }}
-                  title="Download results as .txt"
-                >
-                  <Download size={12} />
-                  .txt
-                </button>
+                  <button
+                    onClick={handleDownloadResults}
+                    disabled={approvedAndCharged.length === 0}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    style={{
+                      background: approvedAndCharged.length > 0
+                        ? "linear-gradient(135deg, hsl(142,65%,32%), hsl(142,60%,42%))"
+                        : "hsla(142,40%,15%,0.4)",
+                      color: "hsl(var(--primary-foreground))",
+                      border: "1px solid hsla(142,65%,50%,0.4)",
+                      boxShadow: approvedAndCharged.length > 0
+                        ? "0 2px 14px hsla(142,65%,40%,0.4), 0 0 24px hsla(142,60%,35%,0.2)"
+                        : "none",
+                    }}
+                    title="Download approved & charged cards as .txt"
+                  >
+                    <Download size={12} />
+                    .txt
+                  </button>
+                </div>
               </div>
             )}
           </div>
