@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Eye, EyeOff, Mail, Lock, User, Send, AlertCircle } from "lucide-react";
 import { z } from "zod";
+import { LogoMark } from "./LogoMark";
 
 /* ─── Zod schemas ─── */
 const loginSchema = z.object({
@@ -398,6 +399,7 @@ const AuthCard = () => {
     >
       {/* Header */}
       <div className="text-center mb-8">
+        <LogoMark />
         <h1
           className="text-2xl font-extrabold tracking-tight text-glow"
           style={{ color: "hsl(var(--foreground))" }}
