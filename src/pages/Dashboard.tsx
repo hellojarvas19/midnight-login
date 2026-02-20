@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Menu, ChevronRight, Home, CreditCard, Crown } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
@@ -42,6 +42,7 @@ const Dashboard = () => {
   const [direction, setDirection]             = useState<1 | -1>(1);
   const [exitContent, setExitContent]         = useState<React.ReactNode>(null);
   const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mainRef       = useRef<HTMLElement | null>(null);
 
   // Swipe-to-close state
   const touchStartX = useRef<number | null>(null);
@@ -70,7 +71,7 @@ const Dashboard = () => {
     }, 220);
   };
 
-  /* ── Touch handlers ── */
+  /* ── Sidebar swipe-to-close handlers ── */
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     isDragging.current = true;
@@ -79,7 +80,6 @@ const Dashboard = () => {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging.current || touchStartX.current === null) return;
     const dx = e.touches[0].clientX - touchStartX.current;
-    // Only allow leftward drag (negative)
     setDrawerDx(Math.min(0, dx));
   };
 
@@ -94,6 +94,69 @@ const Dashboard = () => {
       setMobileSidebarOpen(false);
     }
   };
+
+  /* ── Main content swipe-to-navigate handlers ── */
+  const contentSwipeStartX = useRef<number | null>(null);
+  const contentSwipeStartY = useRef<number | null>(null);
+  const contentSwipeAxis   = useRef<"h" | "v" | null>(null); // locked axis
+
+  const handleContentTouchStart = (e: React.TouchEvent) => {
+    contentSwipeStartX.current = e.touches[0].clientX;
+    contentSwipeStartY.current = e.touches[0].clientY;
+    contentSwipeAxis.current   = null;
+  };
+
+
+  const handleContentTouchEnd = (e: React.TouchEvent) => {
+    if (
+      contentSwipeStartX.current === null ||
+      contentSwipeAxis.current !== "h" ||
+      phase !== "idle" // don't queue during an ongoing transition
+    ) {
+      contentSwipeStartX.current = null;
+      contentSwipeStartY.current = null;
+      contentSwipeAxis.current   = null;
+      return;
+    }
+
+    const dx = e.changedTouches[0].clientX - contentSwipeStartX.current;
+    contentSwipeStartX.current = null;
+    contentSwipeStartY.current = null;
+    contentSwipeAxis.current   = null;
+
+    const CONTENT_SWIPE_THRESHOLD = 55;
+    const currentIdx = SECTION_ORDER.indexOf(active);
+
+    if (dx < -CONTENT_SWIPE_THRESHOLD && currentIdx < SECTION_ORDER.length - 1) {
+      // Swipe left → go forward
+      navigateTo(SECTION_ORDER[currentIdx + 1]);
+    } else if (dx > CONTENT_SWIPE_THRESHOLD && currentIdx > 0) {
+      // Swipe right → go backward
+      navigateTo(SECTION_ORDER[currentIdx - 1]);
+    }
+  };
+
+  // Attach non-passive touchmove to main so we can call preventDefault()
+  // when the gesture locks to horizontal (prevents page scroll during swipe)
+  const stableHandleContentTouchMove = useCallback(
+    (e: TouchEvent) => {
+      if (contentSwipeStartX.current === null || contentSwipeStartY.current === null) return;
+      const dx = Math.abs(e.touches[0].clientX - contentSwipeStartX.current);
+      const dy = Math.abs(e.touches[0].clientY - contentSwipeStartY.current);
+      if (contentSwipeAxis.current === null && (dx > 10 || dy > 10)) {
+        contentSwipeAxis.current = dx > dy ? "h" : "v";
+      }
+      if (contentSwipeAxis.current === "h") e.preventDefault();
+    },
+    [] // refs are stable — no deps needed
+  );
+
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    el.addEventListener("touchmove", stableHandleContentTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", stableHandleContentTouchMove);
+  }, [stableHandleContentTouchMove]);
 
 
   return (
@@ -248,8 +311,13 @@ const Dashboard = () => {
           </div>
         </header>
 
-        {/* Page content — directional slide transition */}
-        <main className="relative flex-1 px-4 py-5 md:p-6 overflow-y-auto overflow-x-hidden">
+        {/* Page content — directional slide transition + swipe navigation */}
+        <main
+          ref={mainRef}
+          className="relative flex-1 px-4 py-5 md:p-6 overflow-y-auto overflow-x-hidden"
+          onTouchStart={handleContentTouchStart}
+          onTouchEnd={handleContentTouchEnd}
+        >
           {/* Exit ghost: absolute overlay that plays the exit animation before unmounting */}
           {phase === "exit" && exitContent && (
             <div
