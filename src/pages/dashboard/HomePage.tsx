@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, BarChart2, CheckCircle, CreditCard, ShieldCheck, Zap } from "lucide-react";
+import { Activity, BarChart2, CheckCircle, CreditCard, ShieldCheck, Zap, TrendingUp } from "lucide-react";
 
 /* ─── Animated counter hook ─── */
 function useCountUp(target: number, duration = 1400, delay = 0) {
@@ -47,77 +47,45 @@ const StatCard = ({
   delay?: number;
 }) => {
   const count = useCountUp(target, 1600, delay + 300);
-  const [hovered, setHovered] = useState(false);
 
   return (
-    <div
-      className="glass-card animate-card-entrance rounded-2xl p-4 flex flex-col gap-3"
-      style={{
-        animationDelay: `${delay}ms`,
-        animationFillMode: "both",
-        transform: hovered ? "translateY(-4px) scale(1.01)" : "translateY(0) scale(1)",
-        boxShadow: hovered
-          ? "0 0 120px hsla(315, 90%, 52%, 0.35), 0 0 200px hsla(315, 80%, 42%, 0.18), 0 0 0 1px hsla(315, 100%, 92%, 0.07) inset, 0 1px 0 hsla(315, 100%, 92%, 0.13) inset, 0 24px 64px hsla(330, 30%, 2%, 0.9)"
-          : undefined,
-        transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease",
-        cursor: "default",
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div className="flex items-center justify-between">
-        <span
-          className="text-xs font-semibold uppercase tracking-wider leading-tight"
-          style={{ color: "hsl(var(--muted-foreground))" }}
-        >
-          {label}
-        </span>
-        <div
-          className="rounded-lg p-1.5 shrink-0 flex items-center gap-1"
-          style={{ background: "hsla(315, 80%, 45%, 0.18)" }}
-        >
+    <div className="flex flex-col gap-2">
+      {/* Label + icon badge */}
+      <div className="flex items-center gap-2">
+        <div className="rounded-lg p-1.5 shrink-0 flex items-center gap-1" style={{ background: "hsla(315,80%,40%,0.15)" }}>
           {emoji && (
-            <span
-              style={{
-                display: "inline-block",
-                fontSize: 13,
-                animation: emojiAnimation,
-                lineHeight: 1,
-              }}
-            >
+            <span style={{ display: "inline-block", fontSize: 12, animation: emojiAnimation, lineHeight: 1 }}>
               {emoji}
             </span>
           )}
-          <Icon
-            size={14}
-            style={{
-              color: "hsl(var(--primary))",
-              filter: "drop-shadow(0 0 4px hsla(315,90%,60%,0.6))",
-            }}
-          />
+          <Icon size={13} style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 4px hsla(315,90%,60%,0.55))" }} />
         </div>
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+          {label}
+        </span>
       </div>
+
+      {/* Counter */}
       <p
-        className="text-3xl font-extrabold tracking-tight tabular-nums"
+        className="text-3xl font-extrabold tracking-tight tabular-nums pl-0.5"
         style={{
+          fontFamily: "'Space Grotesk', sans-serif",
           color: "hsl(var(--foreground))",
-          textShadow: "0 0 20px hsla(315,90%,72%,0.25)",
+          textShadow: "0 0 20px hsla(315,90%,72%,0.22)",
         }}
       >
         {count.toLocaleString()}
         {suffix}
       </p>
-      {/* Subtle progress bar */}
-      <div
-        className="h-0.5 rounded-full overflow-hidden"
-        style={{ background: "hsla(315,40%,30%,0.3)" }}
-      >
+
+      {/* Progress bar */}
+      <div className="h-px rounded-full overflow-hidden" style={{ background: "hsla(315,40%,30%,0.3)" }}>
         <div
           className="h-full rounded-full transition-all duration-[1600ms] ease-out"
           style={{
             width: `${Math.min((count / target) * 100, 100)}%`,
             background: "linear-gradient(90deg, hsl(315,95%,45%), hsl(315,90%,65%))",
-            boxShadow: "0 0 8px hsla(315,90%,55%,0.6)",
+            boxShadow: "0 0 6px hsla(315,90%,55%,0.5)",
           }}
         />
       </div>
@@ -288,11 +256,30 @@ const HomePage = () => {
         </p>
       </div>
 
-      {/* Stat cards — 2 cols mobile, 3 cols desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <StatCard label="Total Checks"   target={1284} icon={BarChart2}   emoji="📊" emojiAnimation="emoji-bounce 1.6s ease-in-out infinite" delay={60}  />
-        <StatCard label="Approved Today" target={3}    icon={CheckCircle} emoji="✅" emojiAnimation="emoji-spin 2.8s linear infinite"         delay={120} />
-        <StatCard label="Cards Scanned"  target={847}  icon={CreditCard}  emoji="💳" emojiAnimation="emoji-wobble 2s ease-in-out infinite"     delay={180} />
+      {/* ── Stats Card ── */}
+      <div
+        className="glass-card animate-card-entrance rounded-2xl overflow-hidden"
+        style={{ animationDelay: "60ms", animationFillMode: "both" }}
+      >
+        {/* Section header row — matches Checker/Profile pattern */}
+        <div
+          className="flex items-center gap-3 px-5 py-4 border-b"
+          style={{ borderColor: "hsla(315,30%,25%,0.2)" }}
+        >
+          <div className="rounded-xl p-2" style={{ background: "hsla(315,80%,40%,0.15)" }}>
+            <TrendingUp size={15} style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 5px hsla(315,90%,60%,0.55))" }} />
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+            Activity Overview
+          </p>
+        </div>
+
+        {/* Stat cards grid */}
+        <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-5">
+          <StatCard label="Total Checks"   target={1284} icon={BarChart2}   emoji="📊" emojiAnimation="emoji-bounce 1.6s ease-in-out infinite" delay={60}  />
+          <StatCard label="Approved Today" target={3}    icon={CheckCircle} emoji="✅" emojiAnimation="emoji-spin 2.8s linear infinite"         delay={120} />
+          <StatCard label="Cards Scanned"  target={847}  icon={CreditCard}  emoji="💳" emojiAnimation="emoji-wobble 2s ease-in-out infinite"     delay={180} />
+        </div>
       </div>
 
       {/* Live activity feed */}
