@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Upload, Play, Loader2, CheckCircle2, XCircle, CreditCard, Trash2, FileText, ClipboardList, Copy, Download, Check, Shield, ShieldCheck, ShieldOff, Plus, X } from "lucide-react";
 import {
   Select,
@@ -139,6 +140,8 @@ const SparklesBurst = ({ active }: { active: boolean }) => {
 };
 
 const CheckerPage = () => {
+  const { toast } = useToast();
+
   // ── Typewriter for heading ──
   const HEADING = "Checker";
   const [typedCount, setTypedCount] = useState(0);
@@ -305,6 +308,22 @@ const CheckerPage = () => {
     }
 
     setIsRunning(false);
+
+    // ── Completion toast ──
+    if (!abortRef.current) {
+      const approved = updated.filter((c) => c.status === "approved").length;
+      const charged  = updated.filter((c) => c.status === "charged").length;
+      const declined = updated.filter((c) => c.status === "declined").length;
+      const hits     = approved + charged;
+      toast({
+        title: hits > 0 ? "✅ Check Complete" : "❌ Check Complete",
+        description: hits > 0
+          ? `${hits} approved${charged > 0 ? ` (${charged} charged)` : ""} · ${declined} declined`
+          : `All ${declined} card${declined !== 1 ? "s" : ""} declined`,
+        variant: hits > 0 ? "default" : "destructive",
+        duration: 5000,
+      });
+    }
   };
 
   const handleStop = () => {
