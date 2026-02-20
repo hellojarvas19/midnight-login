@@ -260,21 +260,26 @@ const ProfilePage = () => {
 
           {/* Avatar ring */}
           <div
-            className="rounded-full overflow-hidden"
             style={{
               position: "relative",
               zIndex: 1,
               width: 90,
               height: 90,
-              border: "3px solid hsl(315,95%,55%)",
+              borderRadius: "50%",
+              padding: 3,
+              background: "linear-gradient(135deg, hsl(48,100%,72%) 0%, hsl(42,100%,52%) 35%, hsl(52,100%,78%) 55%, hsl(36,90%,40%) 80%, hsl(48,100%,68%) 100%)",
+              boxShadow:
+                "0 0 12px 3px hsla(44,100%,56%,0.55), 0 0 28px 6px hsla(44,100%,52%,0.28)",
               animation: "avatar-ring-breathe 2.8s ease-in-out infinite",
             }}
           >
-            <img
-              src={user.avatarUrl}
-              alt="Profile avatar"
-              className="w-full h-full object-cover"
-            />
+            <div className="rounded-full overflow-hidden w-full h-full">
+              <img
+                src={user.avatarUrl}
+                alt="Profile avatar"
+                className="w-full h-full object-cover"
+              />
+            </div>
           </div>
           {/* Verified badge */}
           <div
