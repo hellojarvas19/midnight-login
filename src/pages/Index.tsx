@@ -1,12 +1,27 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import ParticleBackground from "@/components/ParticleBackground";
+import AuthCard from "@/components/AuthCard";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div
+      className="relative min-h-screen flex items-center justify-center"
+      style={{ background: "hsl(var(--background))" }}
+    >
+      {/* Animated star/orb background */}
+      <ParticleBackground />
+
+      {/* Auth card centered */}
+      <main className="relative z-10 flex items-center justify-center w-full py-8 px-4">
+        <AuthCard />
+      </main>
+
+      {/* Bottom attribution / footer */}
+      <p
+        className="absolute bottom-4 left-0 right-0 text-center text-xs"
+        style={{ color: "hsl(var(--muted-foreground))" }}
+      >
+        © 2026 SaaS Dashboard · All rights reserved
+      </p>
     </div>
   );
 };
