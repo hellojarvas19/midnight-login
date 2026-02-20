@@ -1,5 +1,6 @@
 import { Home, CreditCard, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
+import logoCharacter from "@/assets/logo-character.jpg";
 
 type Section = "home" | "checker" | "profile";
 
@@ -39,23 +40,46 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
         </div>
 
         {!collapsed && (
-          <p
-            className="text-xs font-bold tracking-widest uppercase mt-1"
-            style={{
-              whiteSpace: "nowrap",
-              opacity: collapsed ? 0 : 1,
-              transition: "opacity 0.2s ease",
-              background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
-              backgroundSize: "200% auto",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              animation: "gold-shimmer 2.8s linear infinite",
-              filter: "drop-shadow(0 0 6px hsla(44,100%,58%,0.5))",
-            }}
-          >
-            0xAdam
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            {/* Mini avatar */}
+            <div
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: "50%",
+                padding: 2,
+                flexShrink: 0,
+                background: "linear-gradient(135deg, hsl(48,100%,68%) 0%, hsl(42,100%,50%) 40%, hsl(52,100%,76%) 70%, hsl(36,90%,42%) 100%)",
+                boxShadow: "0 0 8px 2px hsla(44,100%,55%,0.55)",
+                animation: "avatar-ring-breathe 2.8s ease-in-out infinite",
+              }}
+            >
+              <img
+                src={logoCharacter}
+                alt="0xAdam avatar"
+                style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }}
+              />
+            </div>
+
+            {/* Gold shimmer name */}
+            <p
+              className="text-xs font-bold tracking-widest uppercase"
+              style={{
+                whiteSpace: "nowrap",
+                opacity: 1,
+                transition: "opacity 0.2s ease",
+                background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
+                backgroundSize: "200% auto",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                animation: "gold-shimmer 2.8s linear infinite",
+                filter: "drop-shadow(0 0 6px hsla(44,100%,58%,0.5))",
+              }}
+            >
+              0xAdam
+            </p>
+          </div>
         )}
       </div>
 
