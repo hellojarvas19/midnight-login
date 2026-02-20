@@ -43,11 +43,23 @@ const StatCard = ({
   delay?: number;
 }) => {
   const count = useCountUp(target, 1600, delay + 300);
+  const [hovered, setHovered] = useState(false);
 
   return (
     <div
       className="glass-card animate-card-entrance rounded-2xl p-4 flex flex-col gap-3"
-      style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
+      style={{
+        animationDelay: `${delay}ms`,
+        animationFillMode: "both",
+        transform: hovered ? "translateY(-4px) scale(1.01)" : "translateY(0) scale(1)",
+        boxShadow: hovered
+          ? "0 0 120px hsla(315, 90%, 52%, 0.35), 0 0 200px hsla(315, 80%, 42%, 0.18), 0 0 0 1px hsla(315, 100%, 92%, 0.07) inset, 0 1px 0 hsla(315, 100%, 92%, 0.13) inset, 0 24px 64px hsla(330, 30%, 2%, 0.9)"
+          : undefined,
+        transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease",
+        cursor: "default",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <div className="flex items-center justify-between">
         <span

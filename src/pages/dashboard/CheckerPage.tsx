@@ -616,6 +616,7 @@ const CheckerPage = () => {
               border: isRunning
                 ? "1px solid hsla(0,75%,60%,0.3)"
                 : "1px solid hsla(315,80%,60%,0.3)",
+              animation: !isRunning && gateway && validCount > 0 ? "pulse-glow 3s ease-in-out infinite" : "none",
             }}
           >
             {isRunning ? (
@@ -793,6 +794,7 @@ const CheckerPage = () => {
             {cards.map((c, i) => {
               const cfg = STATUS_CONFIG[c.status];
               const isInvalid = !c.luhnValid;
+              const staggerDelay = Math.min(i, 20) * 40;
               return (
                 <div
                   key={i}
@@ -806,6 +808,7 @@ const CheckerPage = () => {
                     borderLeft: isInvalid
                       ? "3px solid hsla(0,75%,55%,0.7)"
                       : "3px solid transparent",
+                    animation: `card-entrance 0.45s cubic-bezier(0.34,1.56,0.64,1) ${staggerDelay}ms both`,
                   }}
                 >
                   {/* Icon */}

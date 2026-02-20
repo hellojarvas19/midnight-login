@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User,
   Hash,
@@ -56,7 +56,14 @@ const ProfilePage = () => {
   const [copiedId, setCopiedId] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [loggedOut, setLoggedOut] = useState(false);
+  const [creditsBarWidth, setCreditsBarWidth] = useState(0);
   const user = MOCK_USER;
+
+  // Animate credits bar from 0 → 7% on mount
+  useEffect(() => {
+    const t = setTimeout(() => setCreditsBarWidth(7), 120);
+    return () => clearTimeout(t);
+  }, []);
 
   const handleLogout = async () => {
     if (loggingOut || loggedOut) return;
@@ -90,7 +97,7 @@ const ProfilePage = () => {
               width: 90,
               height: 90,
               border: "3px solid hsl(315,95%,55%)",
-              boxShadow: "0 0 30px hsla(315,90%,55%,0.5), 0 0 60px hsla(315,80%,45%,0.2)",
+              animation: "avatar-ring-breathe 2.8s ease-in-out infinite",
             }}
           >
             <img
@@ -242,10 +249,10 @@ const ProfilePage = () => {
             <div
               className="h-full rounded-full"
               style={{
-                width: "7%",
+                width: `${creditsBarWidth}%`,
                 background: "linear-gradient(90deg, hsl(315,95%,45%), hsl(315,90%,65%))",
                 boxShadow: "0 0 10px hsla(315,90%,55%,0.5)",
-                transition: "width 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                transition: "width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
             />
           </div>
