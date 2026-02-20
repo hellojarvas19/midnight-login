@@ -176,9 +176,10 @@ const ProfilePage = () => {
   const [creditsBarWidth, setCreditsBarWidth] = useState(0);
   const user = MOCK_USER;
 
-  // Animated referral stat counters (delay so card entrance finishes first)
-  const referralFriendsCount  = useCountUp(user.referralCount,       1200, 350);
-  const referralCreditsCount  = useCountUp(user.referralCount * 100, 1400, 450);
+  // Animated counters — staggered so card entrances finish first
+  const creditsCount         = useCountUp(user.credits,              1600, 200);
+  const referralFriendsCount = useCountUp(user.referralCount,        1200, 350);
+  const referralCreditsCount = useCountUp(user.referralCount * 100,  1400, 450);
 
   // Animate credits bar from 0 → 7% on mount
   useEffect(() => {
@@ -457,7 +458,7 @@ const ProfilePage = () => {
                 textShadow: "0 0 20px hsla(315,90%,60%,0.5)",
               }}
             >
-              {user.credits.toLocaleString()}
+              {creditsCount.toLocaleString()}
             </p>
             <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
               Available credits
