@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Menu } from "lucide-react";
+import { Menu, ChevronRight } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import HomePage from "@/pages/dashboard/HomePage";
@@ -158,12 +158,38 @@ const Dashboard = () => {
             <Menu size={18} />
           </button>
 
-          <h1
-            className="text-sm font-semibold tracking-widest uppercase"
-            style={{ color: "hsl(var(--muted-foreground))" }}
-          >
-            {SECTION_TITLE[active]}
-          </h1>
+          {/* Animated breadcrumb */}
+          <nav className="flex items-center gap-1.5" aria-label="Breadcrumb">
+            {/* Root crumb */}
+            <span
+              className="text-xs font-semibold tracking-widest uppercase"
+              style={{ color: "hsl(var(--muted-foreground))", opacity: 0.55 }}
+            >
+              0xAdam
+            </span>
+
+            {/* Separator */}
+            <ChevronRight
+              size={12}
+              style={{
+                color: "hsl(var(--muted-foreground))",
+                opacity: 0.4,
+                flexShrink: 0,
+              }}
+            />
+
+            {/* Active section — re-mounts on every navigation to trigger animation */}
+            <span
+              key={pageKey}
+              className="text-xs font-bold tracking-widest uppercase"
+              style={{
+                color: "hsl(var(--foreground))",
+                animation: "breadcrumb-slide-in 0.28s cubic-bezier(0.22,1,0.36,1) both",
+              }}
+            >
+              {SECTION_TITLE[active]}
+            </span>
+          </nav>
 
           <div className="flex-1" />
 
