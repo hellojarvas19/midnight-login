@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   MessageCircle, Send, Image as ImageIcon, Mic,
   Pin, X, Play, Pause, MoreVertical, Check, CheckCheck,
-  Crown, Reply, Search, ChevronUp, ChevronDown,
+  Crown, Reply, Search, ChevronUp, ChevronDown, Trash2,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -18,6 +18,7 @@ interface QuotedMessage {
   senderRole: SenderRole;
   content: string;        // truncated preview text
   type: MessageType;
+  deleted?: boolean;
 }
 
 interface ChatMessage {
@@ -28,6 +29,7 @@ interface ChatMessage {
   senderRole: SenderRole;
   timestamp: Date;
   pinned?: boolean;
+  deleted?: boolean;
   imagePreview?: string;
   reactions: Partial<Record<Emoji, number>>;
   myReaction?: Emoji;
@@ -109,32 +111,36 @@ const QuoteBlock = ({
   quote,
   isOwn,
   onScrollTo,
+  isDeleted = false,
 }: {
   quote: QuotedMessage;
   isOwn: boolean;
   onScrollTo?: (id: string) => void;
+  isDeleted?: boolean;
 }) => {
   const isAdmin = quote.senderRole === "admin";
-  const accentColor = isAdmin ? "hsl(44,100%,60%)" : "hsl(315,90%,65%)";
+  const accentColor = isDeleted ? "hsl(var(--muted-foreground))" : isAdmin ? "hsl(44,100%,60%)" : "hsl(315,90%,65%)";
 
   return (
     <button
-      onClick={() => onScrollTo?.(quote.id)}
+      onClick={() => !isDeleted && onScrollTo?.(quote.id)}
       className="w-full text-left flex gap-2.5 rounded-xl px-3 py-2 mb-2 transition-opacity hover:opacity-80 active:opacity-60"
       style={{
         background: isOwn ? "hsla(315,80%,20%,0.28)" : "hsla(330,15%,4%,0.6)",
         borderLeft: `3px solid ${accentColor}`,
+        cursor: isDeleted ? "default" : "pointer",
       }}
     >
       <div className="flex-1 min-w-0">
-        <p
-          className="text-xs font-semibold mb-0.5 truncate"
-          style={{ color: accentColor }}
-        >
-          {isAdmin ? "👑 " : ""}{quote.sender}
-        </p>
-        <p className="text-xs truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
-          {quote.type === "image" ? "📷 Image" : quote.type === "audio" ? "🎤 Voice message" : quote.content}
+        {!isDeleted && (
+          <p className="text-xs font-semibold mb-0.5 truncate" style={{ color: accentColor }}>
+            {isAdmin ? "👑 " : ""}{quote.sender}
+          </p>
+        )}
+        <p className="text-xs truncate italic" style={{ color: "hsl(var(--muted-foreground))", opacity: isDeleted ? 0.6 : 1 }}>
+          {isDeleted
+            ? "🗑️ Message deleted"
+            : quote.type === "image" ? "📷 Image" : quote.type === "audio" ? "🎤 Voice message" : quote.content}
         </p>
       </div>
     </button>
@@ -329,7 +335,7 @@ const PinnedBanner = ({ message, onJump }: { message: ChatMessage; onJump: () =>
 
 /* ─── Message bubble ─── */
 const MessageBubble = ({
-  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, pinnedRef, searchQuery = "",
+  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, onDelete, pinnedRef, searchQuery = "",
 }: {
   msg: ChatMessage;
   isOwn: boolean;
@@ -339,6 +345,7 @@ const MessageBubble = ({
   onReact: (id: string, emoji: Emoji) => void;
   onReply: (msg: ChatMessage) => void;
   onScrollTo: (id: string) => void;
+  onDelete: (id: string) => void;
   pinnedRef?: (el: HTMLDivElement | null) => void;
   searchQuery?: string;
 }) => {
@@ -437,21 +444,35 @@ const MessageBubble = ({
 
             {/* ── Quoted block ── */}
             {msg.quotedMessage && (
-              <QuoteBlock quote={msg.quotedMessage} isOwn={isOwn} onScrollTo={onScrollTo} />
+              <QuoteBlock
+                quote={msg.quotedMessage}
+                isOwn={isOwn}
+                onScrollTo={onScrollTo}
+                isDeleted={msg.quotedMessage.deleted}
+              />
             )}
 
-            {msg.type === "text" && (
-              <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--foreground))" }}>
-                <HighlightText text={msg.content} query={searchQuery} />
+            {/* ── Deleted state ── */}
+            {msg.deleted ? (
+              <p className="text-sm italic" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.55 }}>
+                🗑️ Message deleted
               </p>
+            ) : (
+              <>
+                {msg.type === "text" && (
+                  <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--foreground))" }}>
+                    <HighlightText text={msg.content} query={searchQuery} />
+                  </p>
+                )}
+                {msg.type === "image" && (
+                  <div className="flex flex-col gap-1.5">
+                    <img src={msg.imagePreview || ""} alt="shared" className="rounded-lg max-w-[220px] max-h-[200px] object-cover" />
+                    {msg.content && <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{msg.content}</p>}
+                  </div>
+                )}
+                {msg.type === "audio" && <AudioPlayer label={msg.content} />}
+              </>
             )}
-            {msg.type === "image" && (
-              <div className="flex flex-col gap-1.5">
-                <img src={msg.imagePreview || ""} alt="shared" className="rounded-lg max-w-[220px] max-h-[200px] object-cover" />
-                {msg.content && <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{msg.content}</p>}
-              </div>
-            )}
-            {msg.type === "audio" && <AudioPlayer label={msg.content} />}
           </div>
 
           {/* ⋮ menu button */}
@@ -504,6 +525,15 @@ const MessageBubble = ({
                   </button>
                 )
               )}
+
+              {/* Delete */}
+              <button
+                className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors"
+                style={{ color: "hsl(0,75%,62%)" }}
+                onClick={() => { onDelete(msg.id); setMenuOpen(false); }}
+              >
+                <Trash2 size={12} /> Delete
+              </button>
 
               <button
                 className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors"
@@ -876,6 +906,25 @@ const ChatPage = () => {
   const pinMessage   = (id: string) => setMessages((prev) => prev.map((m) => ({ ...m, pinned: m.id === id ? true  : m.pinned })));
   const unpinMessage = (id: string) => setMessages((prev) => prev.map((m) => ({ ...m, pinned: m.id === id ? false : m.pinned })));
 
+  /* Delete — marks deleted flag; also marks quoted refs as deleted */
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const deleteMessage = useCallback((id: string) => {
+    // kick off slide-out animation for 350ms, then commit
+    setDeletingIds((prev) => new Set([...prev, id]));
+    setTimeout(() => {
+      setDeletingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      setMessages((prev) =>
+        prev.map((m) => {
+          // mark the message itself as deleted
+          if (m.id === id) return { ...m, deleted: true, pinned: false, reactions: {}, myReaction: undefined };
+          // mark any quote that references this message as deleted
+          if (m.quotedMessage?.id === id) return { ...m, quotedMessage: { ...m.quotedMessage, deleted: true } };
+          return m;
+        })
+      );
+    }, 350);
+  }, []);
+
   /* React */
   const reactToMessage = useCallback((msgId: string, emoji: Emoji) => {
     setMessages((prev) =>
@@ -987,6 +1036,9 @@ const ChatPage = () => {
                 style={{
                   borderRadius: 16,
                   transition: "background 0.4s ease, box-shadow 0.3s ease",
+                  ...(deletingIds.has(msg.id)
+                    ? { animation: "msg-delete-out 0.35s cubic-bezier(0.4,0,1,1) both", pointerEvents: "none" }
+                    : {}),
                   ...(isActive
                     ? { boxShadow: "0 0 0 2px hsl(44,100%,58%), 0 0 18px hsla(44,100%,55%,0.25)" }
                     : isMatch
@@ -1003,6 +1055,7 @@ const ChatPage = () => {
                   onReact={reactToMessage}
                   onReply={setReplyTarget}
                   onScrollTo={scrollToMessage}
+                  onDelete={deleteMessage}
                   searchQuery={searchOpen ? searchQuery : ""}
                 />
               </div>
