@@ -161,7 +161,7 @@ const Dashboard = () => {
 
   return (
     <div
-      className="relative min-h-screen flex overflow-hidden"
+      className="relative h-screen flex overflow-hidden"
       style={{ background: "hsl(var(--background))" }}
     >
       {/* Full-page particle backdrop */}
@@ -219,7 +219,7 @@ const Dashboard = () => {
       </div>
 
       {/* ── Main content ── */}
-      <div className="relative z-10 flex flex-col flex-1 min-w-0">
+      <div className="relative z-10 flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Top bar — slide-down entrance */}
         <header
           className="animate-slide-down-fade flex items-center gap-4 px-6 py-4 border-b"
