@@ -1,6 +1,10 @@
-import { Home, CreditCard, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { useState } from "react";
+import { Home, CreditCard, ChevronLeft, ChevronRight, Crown, Zap } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import logoCharacter from "@/assets/logo-character.jpg";
+
+// Mock account snapshot — mirrors MOCK_USER in ProfilePage
+const ACCOUNT = { plan: "Pro", credits: 2_480, username: "@0xadam_checker" };
 
 type Section = "home" | "checker" | "profile";
 
@@ -18,6 +22,8 @@ const NAV_ITEMS: { id: Section; label: string; Icon: typeof Home }[] = [
 ];
 
 const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSidebarProps) => {
+  const [avatarHovered, setAvatarHovered] = useState(false);
+
   return (
     <aside
       className="relative flex flex-col h-full glass-card rounded-2xl overflow-visible"
@@ -41,24 +47,143 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
 
         {!collapsed && (
           <div className="flex items-center gap-2 mt-1">
-            {/* Mini avatar */}
+            {/* Mini avatar with tooltip */}
             <div
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                padding: 2,
-                flexShrink: 0,
-                background: "linear-gradient(135deg, hsl(48,100%,68%) 0%, hsl(42,100%,50%) 40%, hsl(52,100%,76%) 70%, hsl(36,90%,42%) 100%)",
-                boxShadow: "0 0 8px 2px hsla(44,100%,55%,0.55)",
-                animation: "avatar-ring-breathe 2.8s ease-in-out infinite",
-              }}
+              className="relative"
+              style={{ flexShrink: 0 }}
+              onMouseEnter={() => setAvatarHovered(true)}
+              onMouseLeave={() => setAvatarHovered(false)}
             >
-              <img
-                src={logoCharacter}
-                alt="0xAdam avatar"
-                style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }}
-              />
+              <div
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: "50%",
+                  padding: 2,
+                  cursor: "pointer",
+                  background: "linear-gradient(135deg, hsl(48,100%,68%) 0%, hsl(42,100%,50%) 40%, hsl(52,100%,76%) 70%, hsl(36,90%,42%) 100%)",
+                  boxShadow: avatarHovered
+                    ? "0 0 14px 4px hsla(44,100%,58%,0.80), 0 0 28px 6px hsla(44,100%,52%,0.45)"
+                    : "0 0 8px 2px hsla(44,100%,55%,0.55)",
+                  animation: "avatar-ring-breathe 2.8s ease-in-out infinite",
+                  transition: "box-shadow 0.2s ease",
+                }}
+              >
+                <img
+                  src={logoCharacter}
+                  alt="0xAdam avatar"
+                  style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+
+              {/* Tooltip */}
+              {avatarHovered && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 10px)",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    zIndex: 100,
+                    width: 180,
+                    borderRadius: 14,
+                    padding: "12px 14px",
+                    background: "hsla(330, 20%, 7%, 0.96)",
+                    border: "1px solid hsla(44,90%,52%,0.35)",
+                    boxShadow: "0 8px 32px hsla(0,0%,0%,0.5), 0 0 0 1px hsla(44,100%,55%,0.10), 0 0 20px hsla(44,100%,50%,0.12)",
+                    backdropFilter: "blur(16px)",
+                    animation: "fade-in 0.15s ease-out",
+                    pointerEvents: "none",
+                  }}
+                >
+                  {/* Arrow */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -6,
+                      left: "50%",
+                      transform: "translateX(-50%) rotate(45deg)",
+                      width: 10,
+                      height: 10,
+                      background: "hsla(330, 20%, 7%, 0.96)",
+                      border: "1px solid hsla(44,90%,52%,0.35)",
+                      borderBottom: "none",
+                      borderRight: "none",
+                    }}
+                  />
+
+                  {/* Avatar row */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        padding: 2,
+                        flexShrink: 0,
+                        background: "linear-gradient(135deg, hsl(48,100%,68%) 0%, hsl(42,100%,50%) 50%, hsl(36,90%,42%) 100%)",
+                        boxShadow: "0 0 8px 2px hsla(44,100%,55%,0.5)",
+                      }}
+                    >
+                      <img src={logoCharacter} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }} />
+                    </div>
+                    <div>
+                      <p
+                        className="text-xs font-bold"
+                        style={{
+                          background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 50%, hsl(42,100%,52%) 100%)",
+                          backgroundSize: "200% auto",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          backgroundClip: "text",
+                          animation: "gold-shimmer 2.8s linear infinite",
+                        }}
+                      >
+                        0xAdam
+                      </p>
+                      <p className="text-[10px]" style={{ color: "hsl(var(--muted-foreground))" }}>{ACCOUNT.username}</p>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ height: 1, background: "hsla(44,80%,52%,0.18)", marginBottom: 10 }} />
+
+                  {/* Stats */}
+                  <div className="flex flex-col gap-2">
+                    {/* Plan */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>Plan</span>
+                      <span
+                        className="text-[10px] font-bold rounded-full px-2 py-0.5 flex items-center gap-1"
+                        style={{
+                          background: "hsla(44,90%,45%,0.18)",
+                          border: "1px solid hsla(44,90%,55%,0.35)",
+                          color: "hsl(48,100%,70%)",
+                        }}
+                      >
+                        <Crown size={9} style={{ color: "hsl(48,100%,65%)" }} />
+                        {ACCOUNT.plan}
+                      </span>
+                    </div>
+
+                    {/* Credits */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>Credits</span>
+                      <span
+                        className="text-[10px] font-bold rounded-full px-2 py-0.5 flex items-center gap-1"
+                        style={{
+                          background: "hsla(315,80%,40%,0.18)",
+                          border: "1px solid hsla(315,70%,55%,0.30)",
+                          color: "hsl(var(--primary))",
+                        }}
+                      >
+                        <Zap size={9} />
+                        {ACCOUNT.credits.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Gold shimmer name */}
