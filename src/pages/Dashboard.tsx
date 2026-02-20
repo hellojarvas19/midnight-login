@@ -27,13 +27,18 @@ const Dashboard = () => {
       {/* Full-page particle backdrop */}
       <ParticleBackground />
 
-      {/* ── Mobile overlay ── */}
-      {mobileSidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/60"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
+      {/* ── Mobile overlay (backdrop blur) ── */}
+      <div
+        className="fixed inset-0 z-30 md:hidden pointer-events-none"
+        style={{
+          background: mobileSidebarOpen ? "hsla(330,20%,4%,0.65)" : "transparent",
+          backdropFilter: mobileSidebarOpen ? "blur(6px)" : "blur(0px)",
+          WebkitBackdropFilter: mobileSidebarOpen ? "blur(6px)" : "blur(0px)",
+          transition: "background 0.35s ease, backdrop-filter 0.35s ease",
+          pointerEvents: mobileSidebarOpen ? "auto" : "none",
+        }}
+        onClick={() => setMobileSidebarOpen(false)}
+      />
 
       {/* ── Desktop Sidebar ── */}
       <div className="hidden md:flex relative z-40 flex-col p-3">
@@ -51,8 +56,12 @@ const Dashboard = () => {
       <div
         className="fixed top-0 left-0 h-full z-40 flex flex-col p-3 md:hidden"
         style={{
-          transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
+          transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-110%)",
+          transition: "transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+          willChange: "transform",
+          filter: mobileSidebarOpen
+            ? "drop-shadow(8px 0 32px hsla(315,80%,40%,0.35))"
+            : "drop-shadow(0 0 0 transparent)",
         }}
       >
         <AppSidebar
