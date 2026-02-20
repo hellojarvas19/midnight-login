@@ -1,5 +1,24 @@
 import { useState, useRef, useCallback } from "react";
-import { Eye, EyeOff, Mail, Lock, User, Send } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Send, AlertCircle } from "lucide-react";
+import { z } from "zod";
+
+/* ─── Zod schemas ─── */
+const loginSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address").max(255),
+  password: z.string().min(6, "Password must be at least 6 characters").max(128),
+});
+
+const registerSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
+  email: z.string().trim().email("Enter a valid email address").max(255),
+  password: z.string().min(6, "Password must be at least 6 characters").max(128),
+  confirm: z.string(),
+}).refine((d) => d.password === d.confirm, {
+  message: "Passwords do not match",
+  path: ["confirm"],
+});
+
+type FieldErrors = Record<string, string>;
 
 /* ─── Floating label input ─── */
 interface FloatingInputProps {
@@ -11,6 +30,7 @@ interface FloatingInputProps {
   icon: React.ReactNode;
   rightElement?: React.ReactNode;
   autoComplete?: string;
+  error?: string;
 }
 
 const FloatingInput = ({
@@ -22,44 +42,90 @@ const FloatingInput = ({
   icon,
   rightElement,
   autoComplete,
+  error,
 }: FloatingInputProps) => {
   const [focused, setFocused] = useState(false);
   const isFloated = focused || value.length > 0;
+  const hasError = !!error;
 
   return (
-    <div className="relative group">
-      <div
-        className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-        style={{ color: focused ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))", transition: "color 0.3s" }}
-      >
-        {icon}
+    <div className="space-y-1">
+      <div className="relative group">
+        <div
+          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-300"
+          style={{
+            color: hasError
+              ? "hsl(var(--destructive))"
+              : focused
+              ? "hsl(var(--primary))"
+              : "hsl(var(--muted-foreground))",
+          }}
+        >
+          {icon}
+        </div>
+
+        <label
+          htmlFor={id}
+          className="absolute left-10 pointer-events-none font-medium text-sm transition-all duration-200"
+          style={{
+            top: isFloated ? "6px" : "50%",
+            transform: isFloated ? "translateY(0) scale(0.78)" : "translateY(-50%) scale(1)",
+            transformOrigin: "left top",
+            color: hasError
+              ? "hsl(var(--destructive))"
+              : focused
+              ? "hsl(var(--primary))"
+              : "hsl(var(--muted-foreground))",
+            zIndex: 10,
+          }}
+        >
+          {label}
+        </label>
+
+        <input
+          id={id}
+          type={type}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          className="w-full rounded-xl px-10 pt-5 pb-2 text-sm text-foreground transition-all duration-300"
+          style={{
+            height: 54,
+            background: hasError
+              ? "hsla(0, 60%, 10%, 0.7)"
+              : "hsla(330, 12%, 10%, 0.75)",
+            border: hasError
+              ? "1px solid hsla(0, 72%, 58%, 0.8)"
+              : focused
+              ? "1px solid hsla(315, 90%, 58%, 0.7)"
+              : "1px solid hsla(315, 40%, 45%, 0.25)",
+            boxShadow: hasError
+              ? "0 0 0 3px hsla(0, 72%, 58%, 0.15), 0 0 20px hsla(0, 72%, 58%, 0.08)"
+              : focused
+              ? "0 0 0 3px hsla(315, 90%, 58%, 0.15), 0 0 24px hsla(315, 90%, 58%, 0.12)"
+              : "none",
+            outline: "none",
+          }}
+        />
+
+        {rightElement && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
+        )}
       </div>
-      <label
-        htmlFor={id}
-        className="absolute left-10 pointer-events-none font-medium text-sm transition-all duration-200"
-        style={{
-          top: isFloated ? "6px" : "50%",
-          transform: isFloated ? "translateY(0) scale(0.78)" : "translateY(-50%) scale(1)",
-          transformOrigin: "left top",
-          color: focused ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-          zIndex: 10,
-        }}
-      >
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        autoComplete={autoComplete}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        className="glass-input w-full rounded-xl px-10 pt-5 pb-2 text-sm text-foreground"
-        style={{ height: 54 }}
-      />
-      {rightElement && (
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
+
+      {/* Inline error message */}
+      {error && (
+        <div
+          className="flex items-center gap-1.5 px-1"
+          style={{ animation: "fade-in-error 0.2s ease forwards" }}
+        >
+          <AlertCircle size={12} style={{ color: "hsl(var(--destructive))", flexShrink: 0 }} />
+          <p className="text-xs" style={{ color: "hsl(var(--destructive))" }}>
+            {error}
+          </p>
+        </div>
       )}
     </div>
   );
@@ -85,7 +151,7 @@ const PasswordStrength = ({ password }: { password: string }) => {
   const pct = Math.min((score / 5) * 100, 100);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 px-1">
       <div className="h-1 w-full rounded-full overflow-hidden" style={{ background: "hsl(var(--border))" }}>
         <div
           className="h-full rounded-full transition-all duration-500"
@@ -118,26 +184,20 @@ const TelegramButton = ({ text }: { text: string }) => (
   </button>
 );
 
-/* ─── Auth state types ─── */
+/* ─── Auth state ─── */
 type AuthState = "idle" | "loading" | "success";
 
-/* ─── Spinner SVG ─── */
 const Spinner = () => (
-  <svg
-    className="animate-spin"
-    width="18" height="18" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-  >
+  <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
     <path d="M12 2a10 10 0 0 1 10 10" />
   </svg>
 );
 
-/* ─── Animated checkmark SVG ─── */
 const Checkmark = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"
-  >
+    stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
     <path
       d="M5 13l4 4L19 7"
       style={{
@@ -149,16 +209,13 @@ const Checkmark = () => (
   </svg>
 );
 
-/* ─── Primary button with auth state ─── */
 const PrimaryButton = ({
   children,
   authState,
-  onClick,
   type = "button",
 }: {
   children: React.ReactNode;
   authState: AuthState;
-  onClick?: () => void;
   type?: "button" | "submit";
 }) => {
   const isLoading = authState === "loading";
@@ -167,7 +224,6 @@ const PrimaryButton = ({
   return (
     <button
       type={type}
-      onClick={onClick}
       disabled={isLoading || isSuccess}
       className="btn-shimmer w-full rounded-xl py-3.5 text-sm font-bold tracking-wide transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed relative overflow-hidden"
       style={{
@@ -191,8 +247,6 @@ const PrimaryButton = ({
         {isSuccess ? <Checkmark /> : null}
         {isSuccess ? "Success!" : children}
       </span>
-
-      {/* Spinner layer */}
       <span
         className="absolute inset-0 flex items-center justify-center transition-all duration-300"
         style={{ opacity: isLoading ? 1 : 0, transform: isLoading ? "scale(1)" : "scale(0.6)" }}
@@ -203,23 +257,26 @@ const PrimaryButton = ({
   );
 };
 
+/* ─── Eye toggle helper ─── */
+const eyeBtn = (show: boolean, toggle: () => void) => (
+  <button
+    type="button"
+    onClick={toggle}
+    className="transition-colors"
+    style={{ color: "hsl(var(--muted-foreground))" }}
+    tabIndex={-1}
+  >
+    {show ? <EyeOff size={16} /> : <Eye size={16} />}
+  </button>
+);
 
 /* ─── Main auth card ─── */
 const AuthCard = () => {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [transitioning, setTransitioning] = useState(false);
   const [authState, setAuthState] = useState<AuthState>("idle");
-
-  // Simulate auth flow
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (authState !== "idle") return;
-    setAuthState("loading");
-    setTimeout(() => {
-      setAuthState("success");
-      setTimeout(() => setAuthState("idle"), 2200);
-    }, 1800);
-  };
+  const [shaking, setShaking] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   // Login fields
   const [loginEmail, setLoginEmail] = useState("");
@@ -237,6 +294,56 @@ const AuthCard = () => {
   // 3D tilt
   const cardRef = useRef<HTMLDivElement>(null);
   const tiltRef = useRef({ x: 0, y: 0, raf: 0 });
+
+  const triggerShake = () => {
+    setShaking(true);
+    setTimeout(() => setShaking(false), 600);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (authState !== "idle") return;
+
+    setErrors({});
+
+    if (mode === "login") {
+      const result = loginSchema.safeParse({ email: loginEmail, password: loginPassword });
+      if (!result.success) {
+        const fieldErrors: FieldErrors = {};
+        result.error.errors.forEach((err) => {
+          const key = err.path[0] as string;
+          fieldErrors[key] = err.message;
+        });
+        setErrors(fieldErrors);
+        triggerShake();
+        return;
+      }
+    } else {
+      const result = registerSchema.safeParse({
+        name: regName,
+        email: regEmail,
+        password: regPassword,
+        confirm: regConfirm,
+      });
+      if (!result.success) {
+        const fieldErrors: FieldErrors = {};
+        result.error.errors.forEach((err) => {
+          const key = err.path[0] as string;
+          if (!fieldErrors[key]) fieldErrors[key] = err.message;
+        });
+        setErrors(fieldErrors);
+        triggerShake();
+        return;
+      }
+    }
+
+    // Passed validation — run simulated auth
+    setAuthState("loading");
+    setTimeout(() => {
+      setAuthState("success");
+      setTimeout(() => setAuthState("idle"), 2200);
+    }, 1800);
+  };
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const card = cardRef.current;
@@ -267,23 +374,13 @@ const AuthCard = () => {
 
   const switchMode = (next: "login" | "register") => {
     if (next === mode || transitioning) return;
+    setErrors({});
     setTransitioning(true);
     setTimeout(() => {
       setMode(next);
       setTransitioning(false);
     }, 280);
   };
-
-  const eyeBtn = (show: boolean, toggle: () => void) => (
-    <button
-      type="button"
-      onClick={toggle}
-      className="text-muted-foreground hover:text-foreground transition-colors"
-      tabIndex={-1}
-    >
-      {show ? <EyeOff size={16} /> : <Eye size={16} />}
-    </button>
-  );
 
   return (
     <div
@@ -292,11 +389,14 @@ const AuthCard = () => {
       onMouseLeave={handleMouseLeave}
       className="glass-card animate-card-entrance rounded-3xl p-8 w-full max-w-md mx-4"
       style={{
-        transition: "transform 0.15s ease-out",
+        transition: shaking ? "none" : "transform 0.15s ease-out",
         willChange: "transform",
+        animation: shaking
+          ? "card-shake 0.55s cubic-bezier(0.36,0.07,0.19,0.97) both"
+          : undefined,
       }}
     >
-      {/* Logo / brand */}
+      {/* Header */}
       <div className="text-center mb-8">
         <h1
           className="text-2xl font-extrabold tracking-tight text-glow"
@@ -311,11 +411,8 @@ const AuthCard = () => {
         </p>
       </div>
 
-      {/* Mode tab switcher */}
-      <div
-        className="flex rounded-xl p-1 mb-6"
-        style={{ background: "hsl(var(--muted))" }}
-      >
+      {/* Tab switcher */}
+      <div className="flex rounded-xl p-1 mb-6" style={{ background: "hsl(var(--muted))" }}>
         {(["login", "register"] as const).map((m) => (
           <button
             key={m}
@@ -332,7 +429,7 @@ const AuthCard = () => {
         ))}
       </div>
 
-      {/* Form content with fade transition */}
+      {/* Form content */}
       <div
         style={{
           opacity: transitioning ? 0 : 1,
@@ -342,25 +439,27 @@ const AuthCard = () => {
       >
         {mode === "login" ? (
           /* ── LOGIN FORM ── */
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             <FloatingInput
               id="login-email"
               type="email"
               label="Email address"
               value={loginEmail}
-              onChange={setLoginEmail}
+              onChange={(v) => { setLoginEmail(v); setErrors((p) => ({ ...p, email: "" })); }}
               icon={<Mail size={16} />}
               autoComplete="email"
+              error={errors.email}
             />
             <FloatingInput
               id="login-password"
               type={showLoginPw ? "text" : "password"}
               label="Password"
               value={loginPassword}
-              onChange={setLoginPassword}
+              onChange={(v) => { setLoginPassword(v); setErrors((p) => ({ ...p, password: "" })); }}
               icon={<Lock size={16} />}
               autoComplete="current-password"
               rightElement={eyeBtn(showLoginPw, () => setShowLoginPw((s) => !s))}
+              error={errors.password}
             />
 
             <div className="flex justify-end">
@@ -397,33 +496,36 @@ const AuthCard = () => {
           </form>
         ) : (
           /* ── REGISTER FORM ── */
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             <FloatingInput
               id="reg-name"
               label="Full name"
               value={regName}
-              onChange={setRegName}
+              onChange={(v) => { setRegName(v); setErrors((p) => ({ ...p, name: "" })); }}
               icon={<User size={16} />}
               autoComplete="name"
+              error={errors.name}
             />
             <FloatingInput
               id="reg-email"
               type="email"
               label="Email address"
               value={regEmail}
-              onChange={setRegEmail}
+              onChange={(v) => { setRegEmail(v); setErrors((p) => ({ ...p, email: "" })); }}
               icon={<Mail size={16} />}
               autoComplete="email"
+              error={errors.email}
             />
             <FloatingInput
               id="reg-password"
               type={showRegPw ? "text" : "password"}
               label="Password"
               value={regPassword}
-              onChange={setRegPassword}
+              onChange={(v) => { setRegPassword(v); setErrors((p) => ({ ...p, password: "" })); }}
               icon={<Lock size={16} />}
               autoComplete="new-password"
               rightElement={eyeBtn(showRegPw, () => setShowRegPw((s) => !s))}
+              error={errors.password}
             />
 
             {regPassword.length > 0 && <PasswordStrength password={regPassword} />}
@@ -433,17 +535,12 @@ const AuthCard = () => {
               type={showRegConfirm ? "text" : "password"}
               label="Confirm password"
               value={regConfirm}
-              onChange={setRegConfirm}
+              onChange={(v) => { setRegConfirm(v); setErrors((p) => ({ ...p, confirm: "" })); }}
               icon={<Lock size={16} />}
               autoComplete="new-password"
               rightElement={eyeBtn(showRegConfirm, () => setShowRegConfirm((s) => !s))}
+              error={errors.confirm}
             />
-
-            {regConfirm.length > 0 && regPassword !== regConfirm && (
-              <p className="text-xs" style={{ color: "hsl(var(--destructive))" }}>
-                Passwords do not match
-              </p>
-            )}
 
             <PrimaryButton type="submit" authState={authState}>Create Account</PrimaryButton>
 

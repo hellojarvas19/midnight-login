@@ -235,3 +235,22 @@ All colors MUST be HSL.
     opacity: 1;
   }
 }
+
+/* ─── Card shake on validation error ─── */
+@keyframes card-shake {
+  0%   { transform: perspective(1200px) translateX(0); }
+  15%  { transform: perspective(1200px) translateX(-10px) rotateZ(-1deg); }
+  30%  { transform: perspective(1200px) translateX(10px)  rotateZ(1deg); }
+  45%  { transform: perspective(1200px) translateX(-8px)  rotateZ(-0.6deg); }
+  60%  { transform: perspective(1200px) translateX(8px)   rotateZ(0.6deg); }
+  75%  { transform: perspective(1200px) translateX(-4px)  rotateZ(-0.3deg); }
+  90%  { transform: perspective(1200px) translateX(4px)   rotateZ(0.3deg); }
+  100% { transform: perspective(1200px) translateX(0); }
+}
+
+/* ─── Error message fade-in ─── */
+@keyframes fade-in-error {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
