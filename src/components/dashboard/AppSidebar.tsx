@@ -71,7 +71,7 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
               key={id}
               type="button"
               onClick={() => onNavigate(id)}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200"
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 group"
               style={{
                 justifyContent: collapsed ? "center" : "flex-start",
                 background: isActive
@@ -86,6 +86,21 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
                 border: isActive
                   ? "1px solid hsla(315, 70%, 50%, 0.3)"
                   : "1px solid transparent",
+                transition: "all 0.2s ease, box-shadow 0.25s ease",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLElement).style.boxShadow =
+                    "0 0 14px hsla(315, 90%, 55%, 0.22), inset 0 0 0 1px hsla(315, 80%, 55%, 0.12)";
+                  (e.currentTarget as HTMLElement).style.background =
+                    "hsla(315, 60%, 30%, 0.12)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                  (e.currentTarget as HTMLElement).style.background = "transparent";
+                }
               }}
               title={collapsed ? label : undefined}
             >
@@ -95,6 +110,7 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
                   flexShrink: 0,
                   color: isActive ? "hsl(var(--primary))" : "hsl(var(--sidebar-foreground))",
                   filter: isActive ? "drop-shadow(0 0 6px hsla(315,90%,60%,0.7))" : "none",
+                  transition: "filter 0.2s ease, color 0.2s ease",
                 }}
               />
               {!collapsed && (

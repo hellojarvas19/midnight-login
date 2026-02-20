@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Menu } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
@@ -18,6 +18,20 @@ const Dashboard = () => {
   const [active, setActive] = useState<Section>("home");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [pageKey, setPageKey] = useState(0);
+  const [pageVisible, setPageVisible] = useState(true);
+  const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const navigateTo = (section: Section) => {
+    if (section === active) return;
+    setPageVisible(false);
+    if (transitionRef.current) clearTimeout(transitionRef.current);
+    transitionRef.current = setTimeout(() => {
+      setActive(section);
+      setPageKey((k) => k + 1);
+      setPageVisible(true);
+    }, 180);
+  };
 
   return (
     <div
@@ -45,7 +59,7 @@ const Dashboard = () => {
         <div className="flex h-full" style={{ minHeight: "calc(100vh - 24px)" }}>
           <AppSidebar
             active={active}
-            onNavigate={setActive}
+            onNavigate={navigateTo}
             collapsed={collapsed}
             onToggleCollapse={() => setCollapsed((c) => !c)}
           />
@@ -66,7 +80,7 @@ const Dashboard = () => {
       >
         <AppSidebar
           active={active}
-          onNavigate={(s) => { setActive(s); setMobileSidebarOpen(false); }}
+          onNavigate={(s) => { navigateTo(s); setMobileSidebarOpen(false); }}
           collapsed={false}
           onToggleCollapse={() => setMobileSidebarOpen(false)}
         />
@@ -74,9 +88,9 @@ const Dashboard = () => {
 
       {/* ── Main content ── */}
       <div className="relative z-10 flex flex-col flex-1 min-w-0">
-        {/* Top bar */}
+        {/* Top bar — slide-down entrance */}
         <header
-          className="flex items-center gap-4 px-6 py-4 border-b"
+          className="animate-slide-down-fade flex items-center gap-4 px-6 py-4 border-b"
           style={{ borderColor: "hsla(315, 40%, 30%, 0.2)" }}
         >
           {/* Mobile hamburger */}
@@ -115,11 +129,20 @@ const Dashboard = () => {
           </div>
         </header>
 
-        {/* Page content */}
+        {/* Page content — crossfade transition */}
         <main className="flex-1 px-4 py-5 md:p-6 overflow-y-auto">
-          {active === "home"    && <HomePage />}
-          {active === "checker" && <CheckerPage />}
-          {active === "profile" && <ProfilePage />}
+          <div
+            key={pageKey}
+            style={{
+              opacity: pageVisible ? 1 : 0,
+              transform: pageVisible ? "translateY(0)" : "translateY(12px)",
+              transition: "opacity 0.22s ease, transform 0.22s ease",
+            }}
+          >
+            {active === "home"    && <HomePage />}
+            {active === "checker" && <CheckerPage />}
+            {active === "profile" && <ProfilePage />}
+          </div>
         </main>
 
         {/* Footer */}
