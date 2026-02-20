@@ -8,61 +8,56 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Deep black base — Magenta + Black */
-    --background: 330 10% 3%;
-    --foreground: 320 20% 95%;
+    /* Pure abyss black base */
+    --background: 330 15% 2%;
+    --foreground: 320 25% 92%;
 
-    --card: 330 10% 3%;
-    --card-foreground: 320 20% 95%;
+    --card: 330 15% 2%;
+    --card-foreground: 320 25% 92%;
 
-    --popover: 330 10% 5%;
-    --popover-foreground: 320 20% 95%;
+    --popover: 330 12% 4%;
+    --popover-foreground: 320 25% 92%;
 
-    /* Hot magenta primary */
-    --primary: 315 90% 58%;
+    /* Blazing magenta primary */
+    --primary: 315 95% 55%;
     --primary-foreground: 0 0% 100%;
 
-    /* Deep pink secondary */
-    --secondary: 330 80% 45%;
+    /* Deep crimson-pink secondary */
+    --secondary: 335 85% 42%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 330 10% 12%;
-    --muted-foreground: 320 15% 52%;
+    --muted: 330 15% 9%;
+    --muted-foreground: 320 12% 48%;
 
-    --accent: 315 85% 55%;
+    --accent: 315 90% 52%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 58%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 320 15% 16%;
-    --input: 330 12% 12%;
-    --ring: 315 90% 58%;
+    --border: 320 20% 13%;
+    --input: 330 18% 8%;
+    --ring: 315 95% 55%;
 
     --radius: 0.75rem;
 
     /* Glass surface tokens */
-    --glass-bg: 330 12% 7%;
-    --glass-border: 315 50% 50%;
-    --glass-shine: 315 100% 95%;
-
-    /* Orb glow colors — magenta palette */
-    --orb-magenta: 315 90% 58%;
-    --orb-pink: 340 80% 55%;
-    --orb-crimson: 350 70% 45%;
+    --glass-bg: 330 18% 5%;
+    --glass-border: 315 55% 48%;
+    --glass-shine: 315 100% 92%;
 
     /* Telegram brand */
     --telegram: 200 100% 45%;
     --telegram-foreground: 0 0% 100%;
 
-    --sidebar-background: 240 10% 5%;
-    --sidebar-foreground: 220 15% 80%;
-    --sidebar-primary: 245 80% 65%;
+    --sidebar-background: 330 15% 3%;
+    --sidebar-foreground: 320 15% 78%;
+    --sidebar-primary: 315 95% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 10% 12%;
-    --sidebar-accent-foreground: 220 15% 80%;
-    --sidebar-border: 240 10% 14%;
-    --sidebar-ring: 245 80% 65%;
+    --sidebar-accent: 330 15% 10%;
+    --sidebar-accent-foreground: 320 15% 78%;
+    --sidebar-border: 330 15% 11%;
+    --sidebar-ring: 315 95% 55%;
   }
 }
 
@@ -80,27 +75,35 @@ All colors MUST be HSL.
 /* ─── Glass morphism utilities ─── */
 @layer utilities {
   .glass-card {
-    background: hsla(330, 12%, 7%, 0.65);
-    backdrop-filter: blur(28px) saturate(1.5);
-    -webkit-backdrop-filter: blur(28px) saturate(1.5);
-    border: 1px solid hsla(315, 60%, 60%, 0.2);
+    background: hsla(330, 18%, 5%, 0.75);
+    backdrop-filter: blur(32px) saturate(1.6);
+    -webkit-backdrop-filter: blur(32px) saturate(1.6);
+    border: 1px solid hsla(315, 60%, 55%, 0.22);
     box-shadow:
-      0 0 0 1px hsla(315, 100%, 95%, 0.04) inset,
-      0 8px 48px hsla(315, 90%, 40%, 0.3),
-      0 1px 0 hsla(315, 100%, 95%, 0.08) inset;
+      /* Outer magenta halo */
+      0 0 80px hsla(315, 90%, 45%, 0.22),
+      0 0 160px hsla(315, 80%, 40%, 0.12),
+      /* Inner rim light */
+      0 0 0 1px hsla(315, 100%, 92%, 0.05) inset,
+      /* Top shine */
+      0 1px 0 hsla(315, 100%, 92%, 0.1) inset,
+      /* Depth shadow */
+      0 24px 64px hsla(330, 30%, 2%, 0.9);
   }
 
   .glass-input {
-    background: hsla(330, 12%, 10%, 0.75);
-    border: 1px solid hsla(315, 40%, 45%, 0.25);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    background: hsla(330, 20%, 6%, 0.85);
+    border: 1px solid hsla(315, 35%, 35%, 0.22);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
   }
 
   .glass-input:focus {
-    border-color: hsla(315, 90%, 58%, 0.7);
+    background: hsla(330, 20%, 7%, 0.9);
+    border-color: hsla(315, 95%, 58%, 0.75);
     box-shadow:
-      0 0 0 3px hsla(315, 90%, 58%, 0.15),
-      0 0 24px hsla(315, 90%, 58%, 0.12);
+      0 0 0 3px hsla(315, 95%, 55%, 0.18),
+      0 0 30px hsla(315, 95%, 55%, 0.15),
+      0 0 60px hsla(315, 80%, 45%, 0.08);
     outline: none;
   }
 
@@ -119,7 +122,7 @@ All colors MUST be HSL.
     background: linear-gradient(
       90deg,
       transparent,
-      hsla(315, 100%, 95%, 0.2),
+      hsla(315, 100%, 95%, 0.22),
       transparent
     );
     transform: skewX(-20deg);
@@ -131,23 +134,25 @@ All colors MUST be HSL.
   }
 
   .text-glow {
-    text-shadow: 0 0 24px hsla(315, 90%, 70%, 0.6);
+    text-shadow:
+      0 0 20px hsla(315, 90%, 72%, 0.7),
+      0 0 60px hsla(315, 80%, 60%, 0.3);
   }
 
-  /* Magenta orb glows */
+  /* Intensified magenta orb glows */
   .orb-glow-blue {
-    background: radial-gradient(circle, hsla(315, 90%, 58%, 0.4) 0%, transparent 70%);
-    filter: blur(60px);
+    background: radial-gradient(circle, hsla(315, 95%, 52%, 0.5) 0%, hsla(315, 80%, 40%, 0.2) 50%, transparent 70%);
+    filter: blur(50px);
   }
 
   .orb-glow-violet {
-    background: radial-gradient(circle, hsla(340, 80%, 55%, 0.35) 0%, transparent 70%);
-    filter: blur(80px);
+    background: radial-gradient(circle, hsla(340, 85%, 50%, 0.45) 0%, hsla(340, 70%, 35%, 0.18) 50%, transparent 70%);
+    filter: blur(70px);
   }
 
   .orb-glow-indigo {
-    background: radial-gradient(circle, hsla(350, 70%, 45%, 0.28) 0%, transparent 70%);
-    filter: blur(100px);
+    background: radial-gradient(circle, hsla(350, 75%, 42%, 0.35) 0%, transparent 70%);
+    filter: blur(90px);
   }
 
   /* Water ripple rings */
@@ -200,8 +205,16 @@ All colors MUST be HSL.
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px hsla(315, 90%, 58%, 0.35); }
-  50%       { box-shadow: 0 0 48px hsla(315, 90%, 58%, 0.7); }
+  0%, 100% {
+    box-shadow:
+      0 4px 32px hsla(315, 95%, 52%, 0.45),
+      0 0 60px hsla(315, 80%, 45%, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 4px 48px hsla(315, 95%, 58%, 0.75),
+      0 0 100px hsla(315, 80%, 50%, 0.35);
+  }
 }
 
 @keyframes water-ripple {
@@ -253,4 +266,3 @@ All colors MUST be HSL.
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
