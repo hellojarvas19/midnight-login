@@ -35,12 +35,8 @@ const Dashboard = () => {
         />
       )}
 
-      {/* ── Sidebar ── */}
-      <div
-        className="hidden md:flex relative z-40 flex-col p-3"
-        style={{ position: undefined }}
-      >
-        {/* Desktop sidebar */}
+      {/* ── Desktop Sidebar ── */}
+      <div className="hidden md:flex relative z-40 flex-col p-3">
         <div className="flex h-full" style={{ minHeight: "calc(100vh - 24px)" }}>
           <AppSidebar
             active={active}
@@ -49,22 +45,22 @@ const Dashboard = () => {
             onToggleCollapse={() => setCollapsed((c) => !c)}
           />
         </div>
+      </div>
 
-        {/* Mobile drawer */}
-        <div
-          className="fixed top-0 left-0 h-full z-40 md:hidden flex flex-col p-3"
-          style={{
-            transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-100%)",
-            transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
-          }}
-        >
-          <AppSidebar
-            active={active}
-            onNavigate={(s) => { setActive(s); setMobileSidebarOpen(false); }}
-            collapsed={false}
-            onToggleCollapse={() => setMobileSidebarOpen(false)}
-          />
-        </div>
+      {/* ── Mobile Drawer ── */}
+      <div
+        className="fixed top-0 left-0 h-full z-40 flex flex-col p-3 md:hidden"
+        style={{
+          transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
+        }}
+      >
+        <AppSidebar
+          active={active}
+          onNavigate={(s) => { setActive(s); setMobileSidebarOpen(false); }}
+          collapsed={false}
+          onToggleCollapse={() => setMobileSidebarOpen(false)}
+        />
       </div>
 
       {/* ── Main content ── */}
