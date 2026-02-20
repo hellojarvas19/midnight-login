@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Upload, Play, Loader2, CheckCircle2, XCircle, CreditCard, Trash2, FileText, ClipboardList } from "lucide-react";
+import { Upload, Play, Loader2, CheckCircle2, XCircle, CreditCard, Trash2, FileText, ClipboardList, Copy, Download, Check } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -56,8 +56,39 @@ const CheckerPage = () => {
   const [cards, setCards] = useState<CardResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef(false);
+
+  const isDone = cards.length > 0 && !isRunning && cards.every(
+    (c) => c.status === "approved" || c.status === "charged" || c.status === "declined"
+  );
+
+  const buildExportText = () =>
+    cards
+      .map((c) => `${c.card}|${c.expiry}|${c.cvv}|${c.status.toUpperCase()}`)
+      .join("\n");
+
+  const handleCopyResults = async () => {
+    try {
+      await navigator.clipboard.writeText(buildExportText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback: select a textarea
+    }
+  };
+
+  const handleDownloadResults = () => {
+    const text = buildExportText();
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `checker-results-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const parseLines = (text: string): CardResult[] =>
     text
@@ -446,10 +477,52 @@ const CheckerPage = () => {
           className="glass-card animate-card-entrance rounded-2xl overflow-hidden"
           style={{ animationDelay: "140ms", animationFillMode: "both" }}
         >
-          <div className="px-5 py-4 border-b" style={{ borderColor: "hsla(315,30%,25%,0.2)" }}>
+          <div
+            className="px-5 py-4 border-b flex items-center justify-between gap-3"
+            style={{ borderColor: "hsla(315,30%,25%,0.2)" }}
+          >
             <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
               Results — {cards.length} card{cards.length !== 1 ? "s" : ""}
             </h2>
+
+            {/* Export buttons — only shown when check is complete */}
+            {isDone && (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopyResults}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+                  style={{
+                    background: copied
+                      ? "hsla(142,60%,20%,0.4)"
+                      : "hsla(315,40%,15%,0.6)",
+                    color: copied ? "hsl(142,70%,60%)" : "hsl(var(--foreground))",
+                    border: copied
+                      ? "1px solid hsla(142,60%,45%,0.4)"
+                      : "1px solid hsla(315,35%,35%,0.25)",
+                    boxShadow: copied ? "0 0 12px hsla(142,60%,40%,0.2)" : "none",
+                  }}
+                  title="Copy results to clipboard"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+
+                <button
+                  onClick={handleDownloadResults}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(315,95%,38%), hsl(315,85%,48%))",
+                    color: "hsl(var(--primary-foreground))",
+                    border: "1px solid hsla(315,80%,55%,0.3)",
+                    boxShadow: "0 2px 12px hsla(315,90%,50%,0.3)",
+                  }}
+                  title="Download results as .txt"
+                >
+                  <Download size={12} />
+                  .txt
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col divide-y" style={{ maxHeight: 420, overflowY: "auto" }}>
