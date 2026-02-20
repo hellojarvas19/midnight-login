@@ -303,13 +303,22 @@ const CheckerPage = () => {
               }}
             >
               <SelectItem value="stripe-charge" style={{ color: "hsl(var(--foreground))" }}>
-                💳 Stripe Charge
+                <span className="flex items-center gap-2">
+                  <span style={{ display: "inline-block", animation: "emoji-bounce 1.4s ease-in-out infinite" }}>💳</span>
+                  Stripe Charge
+                </span>
               </SelectItem>
               <SelectItem value="stripe-auth" style={{ color: "hsl(var(--foreground))" }}>
-                🔐 Stripe Auth
+                <span className="flex items-center gap-2">
+                  <span style={{ display: "inline-block", animation: "emoji-spin 2.5s linear infinite" }}>🔐</span>
+                  Stripe Auth
+                </span>
               </SelectItem>
               <SelectItem value="shopify" style={{ color: "hsl(var(--foreground))" }}>
-                🛍️ Shopify
+                <span className="flex items-center gap-2">
+                  <span style={{ display: "inline-block", animation: "emoji-wobble 1.8s ease-in-out infinite" }}>🛍️</span>
+                  Shopify
+                </span>
               </SelectItem>
             </SelectContent>
           </Select>
