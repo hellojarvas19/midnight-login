@@ -9,6 +9,7 @@ import {
   Copy,
   Check,
   ShieldCheck,
+  LogOut,
 } from "lucide-react";
 import logoCharacter from "@/assets/logo-character.jpg";
 
@@ -53,7 +54,17 @@ const TX_CONFIG: Record<TxType, { color: string; bg: string; Icon: typeof ArrowD
 
 const ProfilePage = () => {
   const [copiedId, setCopiedId] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [loggedOut, setLoggedOut] = useState(false);
   const user = MOCK_USER;
+
+  const handleLogout = async () => {
+    if (loggingOut || loggedOut) return;
+    setLoggingOut(true);
+    await new Promise((r) => setTimeout(r, 1400));
+    setLoggingOut(false);
+    setLoggedOut(true);
+  };
 
   const handleCopyId = async () => {
     try {
@@ -302,6 +313,102 @@ const ProfilePage = () => {
             );
           })}
         </div>
+      </div>
+      {/* ── Logout Button ── */}
+      <div
+        className="animate-card-entrance"
+        style={{ animationDelay: "200ms", animationFillMode: "both" }}
+      >
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut || loggedOut}
+          className="relative w-full rounded-2xl overflow-hidden group transition-all duration-300"
+          style={{
+            padding: "1px",
+            background: loggedOut
+              ? "linear-gradient(135deg, hsl(142,70%,45%), hsl(142,60%,35%))"
+              : "linear-gradient(135deg, hsl(0,75%,55%), hsl(315,90%,50%))",
+            boxShadow: loggedOut
+              ? "0 0 24px hsla(142,70%,45%,0.45), 0 0 60px hsla(142,60%,35%,0.2)"
+              : "0 0 24px hsla(0,75%,55%,0.45), 0 0 60px hsla(315,80%,45%,0.2)",
+          }}
+        >
+          {/* Animated glow layer */}
+          {!loggedOut && (
+            <span
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              style={{
+                background: "linear-gradient(135deg, hsl(0,80%,60%), hsl(315,95%,55%))",
+                filter: "blur(8px)",
+              }}
+            />
+          )}
+
+          {/* Inner surface */}
+          <span
+            className="relative flex items-center justify-center gap-3 rounded-[14px] px-6 py-4"
+            style={{
+              background: loggedOut
+                ? "hsla(142,50%,10%,0.85)"
+                : "hsla(0,40%,8%,0.85)",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            {loggingOut ? (
+              /* Spinner */
+              <>
+                <svg
+                  className="animate-spin"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ color: "hsl(0,75%,65%)" }}
+                >
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" strokeDasharray="40" strokeDashoffset="15" strokeLinecap="round" />
+                </svg>
+                <span
+                  className="text-sm font-bold tracking-wide"
+                  style={{ color: "hsl(0,75%,65%)" }}
+                >
+                  Signing out…
+                </span>
+              </>
+            ) : loggedOut ? (
+              /* Success state */
+              <>
+                <Check size={18} style={{ color: "hsl(142,70%,55%)" }} />
+                <span
+                  className="text-sm font-bold tracking-wide"
+                  style={{ color: "hsl(142,70%,55%)" }}
+                >
+                  Signed out
+                </span>
+              </>
+            ) : (
+              /* Default state */
+              <>
+                <LogOut
+                  size={18}
+                  className="transition-transform duration-300 group-hover:-translate-x-1"
+                  style={{
+                    color: "hsl(0,75%,65%)",
+                    filter: "drop-shadow(0 0 6px hsla(0,80%,60%,0.7))",
+                  }}
+                />
+                <span
+                  className="text-sm font-bold tracking-wide"
+                  style={{
+                    color: "hsl(0,75%,65%)",
+                    textShadow: "0 0 12px hsla(0,80%,60%,0.5)",
+                  }}
+                >
+                  Log Out
+                </span>
+              </>
+            )}
+          </span>
+        </button>
       </div>
     </div>
   );
