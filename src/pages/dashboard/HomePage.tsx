@@ -267,7 +267,7 @@ const HomePage = () => {
       </div>
 
       {/* Stat cards with animated counters */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <StatCard label="Total Checks" target={1284} icon={BarChart2} delay={60} />
         <StatCard label="Active Sessions" target={3} suffix="" icon={Zap} delay={120} />
         <StatCard label="Addresses Scanned" target={847} icon={ShieldCheck} delay={180} />
