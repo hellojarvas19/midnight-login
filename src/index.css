@@ -284,3 +284,9 @@ All colors MUST be HSL.
   66%       { transform: translateY(-2px) rotate(-0.5deg); }
 }
 
+/* ─── Splash dot bounce ─── */
+@keyframes splash-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+  40%           { transform: scale(1.2); opacity: 1; }
+}
+
