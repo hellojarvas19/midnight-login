@@ -380,7 +380,7 @@ const CheckerPage = () => {
           {/* Animated input panel */}
           <div
             style={{
-              maxHeight: proxyOpen ? "200px" : "0px",
+              maxHeight: proxyOpen ? "320px" : "0px",
               opacity: proxyOpen ? 1 : 0,
               overflow: "hidden",
               transition: "max-height 0.38s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease",
