@@ -1,110 +1,58 @@
 
-# Checker Page Redesign
+## Fix Home Page Layout & Match Card Checker Theme
 
-## Overview
-Overhaul `src/pages/dashboard/CheckerPage.tsx` with three major changes:
-1. Font update to Space Grotesk (already global, but explicitly apply it to headers)
-2. Replace "Address / Contract" input section with a **Select Gateway** dropdown + card input form
-3. Replace the Results empty state with three animated result states
+### Problems Identified
 
----
+**1. Stat Cards Too Cramped on Mobile**
+The grid uses `grid-cols-3` always, forcing three cards side-by-side on a small screen. The labels get squished ("ADDRESSES SCANNED" overflows) and icons get pushed to the edge.
 
-## What Gets Changed
+**Fix:** Change to `grid-cols-2` on mobile and `grid-cols-3` on desktop (`grid grid-cols-2 md:grid-cols-3`). Rename the third stat to something shorter like "Cards Scanned".
 
-### Single File Modified: `src/pages/dashboard/CheckerPage.tsx`
+**2. Home Page Header Style Doesn't Match Checker**
+- Checker page: `text-5xl font-black` title in magenta, acting as a bold page identifier
+- Home page: `text-3xl font-extrabold` "Welcome back, 0xAdam" in plain foreground color with a small magenta name
 
----
+**Fix:** Align header style — keep the welcome text but use the same Space Grotesk font, same sizing approach. Make "Welcome back" smaller/muted and "0xAdam" larger and magenta-glowing, like the Checker's title treatment.
 
-## Section 1 — Header Font
-The "Checker" heading gets `font-family: 'Space Grotesk'` explicitly applied with a larger, bolder weight (`text-5xl font-black`) for a stronger visual presence matching the screenshot.
+**3. Activity Feed Language is Wrong (Blockchain, not Card Checker)**
+Labels say "Wallet analysed", "Address scanned", "Contract scanned" and use fake wallet addresses like `0x71C7...3Ec1`. This is a card checker app, not a blockchain scanner.
 
----
+**Fix:** Replace all seed events and live event templates with card-checker-appropriate language:
+- Labels: "Card checked", "Mass run completed", "Batch processed", "Card declined", "Card approved"
+- Addresses: Show masked card numbers like `•••• 4242`, `•••• 1234`, etc.
 
-## Section 2 — Input Panel Redesign
+**4. Stat Labels Don't Match Card Checker Context**
+- "Active Sessions" and "Addresses Scanned" are wallet/session terms
+- Should be "Cards Checked", "Approved", "Cards in Queue" or similar card checker metrics
 
-Replace the current `ADDRESS / CONTRACT` label + text input with:
+**Fix:** Rename stats to match the checker domain:
+- "Total Checks" → keep
+- "Active Sessions" → "Approved Today"  
+- "Addresses Scanned" → "Cards Scanned"
 
-**Select Gateway** (label)
-- A styled dropdown using Radix `Select` component with three options:
-  - `Stripe Charge` — processes a payment charge
-  - `Stripe Auth` — authorizes without charging
-  - `Shopify` — Shopify order lookup
+### Files to Edit
 
-**Card Details Form** (shown below the gateway selector):
-- Card Number input (formatted `•••• •••• •••• 1234`, font-mono)
-- Expiry + CVV in a 2-column row
-- Cardholder Name input
-- All inputs styled with `glass-input` matching the existing theme
+- `src/pages/dashboard/HomePage.tsx` — fix grid layout, rename stats, fix activity feed language, align header style
 
-**Run Check** button stays at the bottom of the panel (full width, magenta shimmer)
-
----
-
-## Section 3 — Results Panel with Animated States
-
-The results area will have 4 states driven by a `resultState` enum: `idle | loading | charged | approved | declined`
-
-### State: `idle`
-Current empty state (Search icon + "Enter details to begin")
-
-### State: `loading`
-Spinning magenta ring animation while check is processing
-
-### State: `charged` — Animated Diamond + CC Details
-- A rotating/pulsing **diamond shape** (CSS clip-path or SVG) in magenta with a shimmer sweep animation
-- Below the diamond: a glass card showing CC details:
-  - Masked card number: `•••• •••• •••• 1234`
-  - Gateway used (e.g. "Stripe Charge")
-  - Status badge: `CHARGED` in magenta
-  - Amount field
-
-### State: `approved` — Animated Green Checkmark
-- A large animated green circle with a drawing checkmark (SVG stroke-dashoffset animation)
-- Text: "Approved" in green with a glow
-- Subtle green particle burst (CSS box-shadow pulse on rings)
-
-### State: `declined` — Animated Red X
-- A large animated red circle with an X drawn via SVG stroke animation
-- Text: "Declined" in red with a glow
-- Subtle red pulse ring animation
-
----
-
-## New Animations Added to `src/index.css`
+### Technical Details
 
 ```text
-@keyframes diamond-spin     — slow 360° rotate on the diamond shape
-@keyframes diamond-shimmer  — shimmer sweep across the diamond face
-@keyframes check-draw       — already exists, reused for green checkmark
-@keyframes x-draw           — SVG stroke draw for the red X lines
-@keyframes result-pop       — scale-in bounce for result icons
-@keyframes ring-pulse-green — green glow ring expand + fade
-@keyframes ring-pulse-red   — red glow ring expand + fade
+StatCard grid:
+  BEFORE: className="grid grid-cols-3 gap-4"
+  AFTER:  className="grid grid-cols-2 md:grid-cols-3 gap-3"
+
+Header:
+  BEFORE: text-3xl font-extrabold (foreground) + span (primary)
+  AFTER:  Muted "Welcome back," line + text-4xl font-black magenta "0xAdam" 
+          matching the Checker page's Space Grotesk style
+
+Activity feed content:
+  BEFORE: "Wallet analysed", "0xFf00...1234"
+  AFTER:  "Card approved", "•••• 4242" (card checker terminology)
+
+Live events pool:
+  BEFORE: LIVE_EVENTS with blockchain labels
+  AFTER:  Card-checker labels (Card checked, Mass run done, etc.)
 ```
 
----
-
-## Interaction Flow
-
-```text
-User fills card details → selects gateway → clicks "Run Check"
-  → resultState = "loading" (spinner)
-  → after 1.5s simulated delay → randomly sets to charged / approved / declined
-     (for demo purposes — real integration would replace this)
-```
-
-For demo, the result is determined by a simple simulation:
-- If card number ends in even digit → `approved`
-- If card number ends in odd digit → `declined`
-- If gateway is "Stripe Charge" → `charged` (shows CC details card)
-
----
-
-## Technical Details
-
-- Uses `useState` for: `gateway`, `cardNumber`, `expiry`, `cvv`, `name`, `resultState`
-- Radix `Select` component from `src/components/ui/select.tsx` (already installed)
-- SVG animations use `stroke-dasharray` / `stroke-dashoffset` for draw-on effects
-- Diamond shape built with CSS `clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)`
-- All result panels use `animate-card-entrance` for smooth entry
-- New keyframes added to `src/index.css` for diamond spin and X draw
+No new dependencies needed. Changes are isolated to `HomePage.tsx` only.
