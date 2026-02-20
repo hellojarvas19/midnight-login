@@ -1,22 +1,11 @@
 import { useEffect, useRef } from "react";
 
-interface Particle {
-  x: number;
-  y: number;
-  size: number;
-  speedY: number;
-  driftX: number;
-  opacity: number;
-  delay: number;
-}
-
 const ParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -27,15 +16,31 @@ const ParticleBackground = () => {
     resize();
     window.addEventListener("resize", resize);
 
-    const particles: Particle[] = Array.from({ length: 80 }, () => ({
+    // Particles (now magenta-tinted)
+    const particles = Array.from({ length: 90 }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      size: Math.random() * 1.5 + 0.3,
-      speedY: Math.random() * 0.4 + 0.1,
-      driftX: (Math.random() - 0.5) * 0.3,
-      opacity: Math.random() * 0.6 + 0.2,
+      size: Math.random() * 1.4 + 0.3,
+      speedY: Math.random() * 0.35 + 0.08,
+      opacity: Math.random() * 0.55 + 0.2,
       delay: Math.random() * 200,
     }));
+
+    // Ripple circles
+    const ripples: { x: number; y: number; r: number; maxR: number; alpha: number; speed: number }[] = [];
+    const spawnRipple = () => {
+      ripples.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        r: 0,
+        maxR: 180 + Math.random() * 200,
+        alpha: 0.35,
+        speed: 0.6 + Math.random() * 0.8,
+      });
+    };
+    // Seed initial ripples
+    for (let i = 0; i < 6; i++) spawnRipple();
+    const rippleInterval = setInterval(spawnRipple, 1800);
 
     let animId: number;
     let frame = 0;
@@ -43,32 +48,51 @@ const ParticleBackground = () => {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Background gradient
+      // Background — deep black with subtle magenta tint
       const grad = ctx.createRadialGradient(
-        canvas.width * 0.5,
-        canvas.height * 0.3,
-        0,
-        canvas.width * 0.5,
-        canvas.height * 0.5,
-        canvas.width * 0.8
+        canvas.width * 0.5, canvas.height * 0.35, 0,
+        canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.85
       );
-      grad.addColorStop(0, "hsla(245, 40%, 10%, 1)");
-      grad.addColorStop(0.5, "hsla(240, 20%, 5%, 1)");
-      grad.addColorStop(1, "hsla(240, 10%, 2%, 1)");
+      grad.addColorStop(0,   "hsla(315, 25%, 8%, 1)");
+      grad.addColorStop(0.5, "hsla(330, 15%, 4%, 1)");
+      grad.addColorStop(1,   "hsla(330, 8%, 2%, 1)");
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Particles
+      // Water ripple circles
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rp = ripples[i];
+        rp.r += rp.speed;
+        rp.alpha *= 0.988;
+
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsla(315, 90%, 65%, ${rp.alpha})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Second inner ring
+        if (rp.r > 30) {
+          ctx.beginPath();
+          ctx.arc(rp.x, rp.y, rp.r * 0.55, 0, Math.PI * 2);
+          ctx.strokeStyle = `hsla(340, 80%, 60%, ${rp.alpha * 0.5})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+
+        if (rp.r >= rp.maxR || rp.alpha < 0.01) ripples.splice(i, 1);
+      }
+
+      // Floating star particles
       particles.forEach((p) => {
         if (frame < p.delay) return;
-
         const t = (frame - p.delay) * 0.5;
         const py = (p.y - t * p.speedY + canvas.height) % canvas.height;
-        const px = p.x + Math.sin(t * 0.01 + p.delay) * 15;
+        const px = p.x + Math.sin(t * 0.009 + p.delay) * 12;
 
         ctx.beginPath();
         ctx.arc(px % canvas.width, py, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(245, 80%, 80%, ${p.opacity})`;
+        ctx.fillStyle = `hsla(315, 85%, 80%, ${p.opacity})`;
         ctx.fill();
       });
 
@@ -80,31 +104,42 @@ const ParticleBackground = () => {
 
     return () => {
       cancelAnimationFrame(animId);
+      clearInterval(rippleInterval);
       window.removeEventListener("resize", resize);
     };
   }, []);
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
-      {/* Canvas particles */}
+      {/* Canvas: particles + water ripples */}
       <canvas ref={canvasRef} className="absolute inset-0" />
 
-      {/* Floating orbs */}
+      {/* Floating magenta orbs */}
       <div
         className="orb-glow-blue animate-float-1 absolute"
-        style={{ width: 500, height: 500, top: "-10%", left: "-5%" }}
+        style={{ width: 520, height: 520, top: "-12%", left: "-8%" }}
       />
       <div
         className="orb-glow-violet animate-float-2 absolute"
-        style={{ width: 600, height: 600, bottom: "-15%", right: "-10%" }}
+        style={{ width: 640, height: 640, bottom: "-18%", right: "-12%" }}
       />
       <div
         className="orb-glow-indigo animate-float-3 absolute"
-        style={{ width: 400, height: 400, top: "30%", right: "20%" }}
+        style={{ width: 380, height: 380, top: "28%", right: "18%" }}
       />
       <div
         className="orb-glow-blue animate-float-2 absolute"
-        style={{ width: 300, height: 300, bottom: "10%", left: "15%" }}
+        style={{ width: 280, height: 280, bottom: "12%", left: "12%", animationDelay: "-4s" }}
+      />
+
+      {/* Animated wave overlay for water feel */}
+      <div
+        className="animate-wave absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(135deg, hsla(315,80%,40%,0.06) 0%, transparent 40%, hsla(340,70%,35%,0.05) 70%, transparent 100%)",
+          backgroundSize: "400% 400%",
+        }}
       />
     </div>
   );
