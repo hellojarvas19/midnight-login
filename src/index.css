@@ -417,6 +417,18 @@ All colors MUST be HSL.
   50%        { translate: 0 -7px; }
 }
 
+/* ─── Gold aura pulse ─── */
+@keyframes gold-aura-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
 /* ─── Crown sparkle drift ─── */
 @keyframes crown-sparkle-drift {
   0%   { transform: translate(0, 0)      scale(1);    opacity: 1; }

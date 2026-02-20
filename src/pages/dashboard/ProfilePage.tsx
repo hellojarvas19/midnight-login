@@ -224,10 +224,46 @@ const ProfilePage = () => {
             </svg>
           </div>
 
+          {/* Gold aura ring — sits behind avatar */}
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 110,
+              height: 110,
+              borderRadius: "50%",
+              background: "transparent",
+              boxShadow:
+                "0 0 0 4px hsla(44,100%,58%,0.35), 0 0 22px 6px hsla(44,100%,55%,0.30), 0 0 50px 14px hsla(42,100%,50%,0.16)",
+              animation: "gold-aura-pulse 2.4s ease-in-out infinite",
+              zIndex: 0,
+            }}
+          />
+          {/* Second softer outer ring */}
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 130,
+              height: 130,
+              borderRadius: "50%",
+              background: "transparent",
+              boxShadow: "0 0 30px 10px hsla(44,100%,52%,0.10)",
+              animation: "gold-aura-pulse 2.4s ease-in-out infinite 0.6s",
+              zIndex: 0,
+            }}
+          />
+
           {/* Avatar ring */}
           <div
             className="rounded-full overflow-hidden"
             style={{
+              position: "relative",
+              zIndex: 1,
               width: 90,
               height: 90,
               border: "3px solid hsl(315,95%,55%)",
