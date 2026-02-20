@@ -178,13 +178,13 @@ const ProfilePage = () => {
           <CrownSparkles />
           {/* Rotating tilted golden crown */}
           <div
-            style={{
+          style={{
               position: "absolute",
               top: -38,
               left: "50%",
               transform: "translateX(-50%)",
               zIndex: 10,
-              animation: "crown-tilt-spin 3.6s ease-in-out infinite",
+              animation: "crown-tilt 3.6s ease-in-out infinite, crown-bob 2.2s ease-in-out infinite",
               transformOrigin: "center bottom",
               filter: "drop-shadow(0 0 8px hsla(45,100%,55%,0.85)) drop-shadow(0 0 18px hsla(45,90%,50%,0.5))",
             }}
