@@ -1,50 +1,86 @@
 
-## 🖤 Dark Glassmorphism Login / Register Page
+# Dashboard Page with Glassmorphism Sidebar
 
-A stunning, visually immersive authentication UI for a SaaS Dashboard — built entirely as a frontend experience with no backend required yet.
+## Overview
 
----
+Build a `/dashboard` route that users land on after clicking "Continue with Telegram". It features a collapsible glassmorphism sidebar with **Home** and **Checker** navigation items, the same dark magenta visual theme, and page content for each section.
 
-### 🎨 Visual Design System
-- **Theme**: Deep black background (`#000` → `#0a0a0f`) with subtle dark purple/blue gradient overlay
-- **Glass Cards**: Frosted glass panels using `backdrop-filter: blur`, semi-transparent white borders, and inner glow
-- **Accent Colors**: Soft electric blue and violet glows (`#6366f1`, `#8b5cf6`) for highlights, buttons, and active states
-- **Typography**: Clean modern sans-serif, white/off-white text hierarchy
+## What Gets Built
 
----
+### New Files
+1. **`src/pages/Dashboard.tsx`** — Main dashboard layout wrapping sidebar + content area
+2. **`src/components/dashboard/AppSidebar.tsx`** — Glassmorphism sidebar with logo, Home & Checker nav items, collapse toggle
+3. **`src/pages/dashboard/HomePage.tsx`** — Home tab content (welcome card + stats placeholders)
+4. **`src/pages/dashboard/CheckerPage.tsx`** — Checker tab content (input tool panel)
 
-### 🌀 3D & Animation Effects
-- **Floating 3D orbs** in the background — large blurred glowing spheres that slowly drift and pulse
-- **Tilt/parallax card effect** — the glass login card subtly rotates in 3D as the user moves their mouse
-- **Smooth page entrance** — the card fades + scales in with a spring-like animation on load
-- **Input focus glow** — inputs emit a soft neon glow when focused
-- **Button ripple + shimmer** — buttons have a light sweep animation on hover
-- **Particle/star field** background — subtle animated floating dots/particles behind everything
+### Modified Files
+1. **`src/App.tsx`** — Add `/dashboard` route
+2. **`src/components/AuthCard.tsx`** — Wire the Telegram button to navigate to `/dashboard` on click (simulated login)
 
 ---
 
-### 📋 Login Page
-- **Email** and **Password** input fields with animated floating labels
-- **"Sign In"** button with hover shimmer effect
-- **"Login with Telegram"** button — styled with Telegram's brand colors, opens Telegram OAuth widget
-- Toggle to switch to Register view
-- "Forgot password?" link
+## Technical Architecture
+
+```text
+/dashboard
+├── AppSidebar (left, collapsible)
+│   ├── LogoMark + "0xAdam"
+│   ├── Nav: Home (House icon)
+│   ├── Nav: Checker (Search icon)
+│   └── Collapse toggle button
+└── Main content area (right)
+    ├── Top bar (hamburger trigger + page title)
+    ├── <HomePage />  when Home is active
+    └── <CheckerPage /> when Checker is active
+```
+
+The sidebar uses internal React state (`useState`) for active section and collapse — no extra library needed (avoids SidebarProvider complexity for this two-item nav).
 
 ---
 
-### 📋 Register Page
-- **Full Name**, **Email**, **Password**, **Confirm Password** fields
-- **"Create Account"** button
-- **"Register with Telegram"** button
-- Toggle back to Login view
-- Password strength indicator bar with animated fill
+## Sidebar Design
+
+- **Width**: 220px expanded, 64px collapsed (icon-only mini mode)
+- **Style**: `glass-card` background with magenta border, same backdrop blur as auth card
+- **Logo section**: `LogoMark` image (small, 48px) + "0xAdam Checker" text (hidden when collapsed)
+- **Nav items**: Magenta active highlight with glow, icon + label. Label hidden in collapsed state
+- **Collapse button**: Chevron arrow at bottom of sidebar, always visible
 
 ---
 
-### 🔄 Login ↔ Register Toggle
-- Smooth animated transition between the two forms — the card content flips/fades when toggling between Login and Register modes, no page reload
+## Page Content
+
+### Home Page
+- Large welcome header: "Welcome back, 0xAdam" with `text-glow`
+- 3 glass stat cards (placeholders): Total Checks, Active Sessions, Last Login
+- A "Recent Activity" glass panel (empty state with magenta icon)
+
+### Checker Page
+- A glass panel with a text input (styled with `glass-input`) and a magenta "Run Check" button
+- Results area below (empty state initially: "Enter an address to begin")
 
 ---
 
-### 📱 Responsive
-- Fully responsive — centered card layout on desktop, full-screen card on mobile with all effects preserved
+## Navigation Flow
+
+```text
+/ (Login page)
+  └── [Continue with Telegram] → navigate("/dashboard")
+
+/dashboard
+  ├── Sidebar: Home (default active)
+  └── Sidebar: Checker
+```
+
+The Telegram button gets an `onClick` with `useNavigate("/dashboard")` — simulating post-auth redirect until real Telegram OAuth is connected.
+
+---
+
+## Styling Consistency
+
+- All panels use the existing `glass-card` utility class
+- Inputs use the existing `glass-input` utility class
+- Buttons use the existing `btn-shimmer` + magenta gradient pattern
+- `ParticleBackground` reused as the full-page backdrop on the dashboard
+- Animations: `animate-card-entrance` on content panels for smooth mount transitions
+- Active sidebar items glow with `box-shadow: 0 0 20px hsla(315, 90%, 55%, 0.35)`
