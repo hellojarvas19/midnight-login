@@ -1,83 +1,78 @@
 
 
-# Add Telegram-Style Features to Chat Page
+# Backend Step 1: Authentication and User Profiles
 
-This plan adds the most recognizable and useful Telegram group features that are currently missing from the Chat page.
-
----
-
-## New Features
-
-### 1. Member List / Info Panel (slide-out drawer)
-- A toggleable side panel (or overlay on mobile) showing group info: name, description, member count, and a scrollable member list with online status dots and role badges (Admin/Member).
-- Triggered by clicking the header area or a new info icon button.
-
-### 2. Unread Messages Separator and "Scroll to Bottom" Button
-- An "Unread Messages" divider bar that appears between the last-read message and new ones.
-- A floating "scroll to bottom" button (with a chevron-down icon) that appears when the user scrolls up. Shows an unread count badge when there are new messages below.
-
-### 3. Forward Message
-- A new "Forward" option in the message context menu (the three-dot dropdown).
-- Opens a small modal to pick a simulated channel/user to forward to, then shows a toast confirmation.
-
-### 4. Copy Message Text
-- A new "Copy" option in the message context menu that copies the text content to the clipboard and shows a brief toast/checkmark feedback.
-
-### 5. Link Preview Cards
-- When a message contains a URL, render a styled preview card below the text showing a placeholder domain, title, and description (simulated since there's no backend to fetch metadata).
-
-### 6. Poll Creation and Voting
-- A "Create Poll" button (bar-chart icon) in the input toolbar.
-- Opens a small modal to enter a question and 2-4 options.
-- Polls render as special message bubbles with votable option bars showing percentages and vote counts. Users can vote once per poll.
-
-### 7. User Profile Popup
-- Clicking on a user's avatar or name shows a small popover card with: avatar, username, role badge, join date, and a "Send Message" button (simulated).
-
-### 8. Mute / Notification Toggle
-- A bell/bell-off icon button in the header to toggle muted state.
-- When muted, a small "Muted" badge appears next to the group name, and a toast confirms the action.
+We'll set up Lovable Cloud (Supabase) and build real user authentication as the foundation for everything else.
 
 ---
 
-## Technical Details
+## What This Step Covers
 
-### File Changes
+1. **Enable Lovable Cloud** to get a database and auth system
+2. **Create a profiles table** to store user info (username, avatar, Telegram ID, credits, referral data)
+3. **Create a user_roles table** for role management (admin/user)
+4. **Set up Telegram-style authentication** using Supabase email/password auth (Telegram OAuth requires a bot token and external webhook -- we can layer that on later, but for now we'll use a login form that fits the existing UI)
+5. **Protect the dashboard** so only logged-in users can access it
+6. **Wire up the Profile page** to show real user data instead of mock data
 
-**`src/pages/dashboard/ChatPage.tsx`** (sole file modified):
+---
 
-1. **New Types**:
-   - Add `"poll"` to `MessageType`.
-   - Add `PollOption` interface (`{ id, text, votes }`) and `pollData` field to `ChatMessage`.
-   - Add `"forward"` action type for the context menu.
+## Database Schema
 
-2. **New Components** (defined within the same file, following existing patterns):
-   - `MemberPanel` - Slide-out overlay with member list, online indicators, role badges.
-   - `ScrollToBottomButton` - Floating FAB with unread badge, appears on scroll-up.
-   - `UnreadSeparator` - Thin styled divider with "Unread Messages" text.
-   - `ForwardModal` - Small channel picker modal (simulated channels list).
-   - `PollBubble` - Special bubble for polls with animated vote bars.
-   - `PollCreateModal` - Form modal for creating polls (question + options).
-   - `UserProfilePopover` - Avatar-click popover card.
-   - `LinkPreviewCard` - Styled card for URL detection in text messages.
+### `profiles` table
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid (PK, FK to auth.users) | |
+| username | text | Display name |
+| telegram_id | text (nullable) | For future Telegram integration |
+| avatar_url | text (nullable) | |
+| credits | integer (default 0) | |
+| referral_code | text (unique) | Auto-generated |
+| referred_by | uuid (nullable, FK to profiles) | |
+| created_at | timestamptz | |
 
-3. **State Additions** in `ChatPage`:
-   - `isMuted` (boolean) for notification toggle.
-   - `showMembers` (boolean) for member panel.
-   - `showScrollBtn` (boolean) driven by scroll position observer.
-   - `unreadCount` (number) for the scroll-to-bottom badge.
-   - `forwardTarget` (ChatMessage | null) for forward modal.
-   - `showPollModal` (boolean) for poll creation.
-   - `profileTarget` (sender info | null) for user profile popup.
+### `user_roles` table
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid (PK) | |
+| user_id | uuid (FK to auth.users, CASCADE) | |
+| role | app_role enum (admin, moderator, user) | |
+| unique(user_id, role) | | |
 
-4. **Updated Components**:
-   - `MessageBubble`: Add "Copy" and "Forward" to the dropdown menu. Add link detection and `LinkPreviewCard` rendering. Add `UserProfilePopover` trigger on avatar/name click.
-   - Header: Add mute toggle button (Bell/BellOff icon) and info/members button.
-   - Input bar: Add poll creation button (BarChart3 icon).
-   - Message list wrapper: Add scroll position listener for the floating button and unread separator logic.
+### RLS Policies
+- Users can read their own profile
+- Users can update their own profile (username, avatar_url only)
+- Roles table secured with a `has_role()` security definer function
 
-5. **New Icons** (from lucide-react):
-   - `Bell`, `BellOff`, `BarChart3`, `Copy`, `Forward`, `ChevronDown`, `Users`, `ExternalLink`, `Info`
+### Trigger
+- Auto-create profile row on signup with a generated referral code
 
-All new components follow the existing glassmorphism styling with `hsla()` color tokens, gold accents for admin elements, and the same animation patterns (card-entrance, reply-slide-in).
+---
+
+## File Changes
+
+### New Files
+- **`src/integrations/supabase/client.ts`** -- Supabase client (auto-generated by Lovable Cloud)
+- **`src/contexts/AuthContext.tsx`** -- Auth provider with `onAuthStateChange` listener, exposes `user`, `profile`, `signIn`, `signUp`, `signOut`
+- **`src/pages/ResetPassword.tsx`** -- Password reset page (required for forgot-password flow)
+
+### Modified Files
+- **`src/App.tsx`** -- Wrap with `AuthProvider`, add `/reset-password` route, protect `/dashboard` with auth guard
+- **`src/components/AuthCard.tsx`** -- Replace "Continue with Telegram" button with email/password login form (sign in + sign up toggle), keep existing glassmorphism styling
+- **`src/pages/Index.tsx`** -- Redirect to `/dashboard` if already logged in
+- **`src/pages/Dashboard.tsx`** -- Redirect to `/` if not logged in
+- **`src/pages/dashboard/ProfilePage.tsx`** -- Replace `MOCK_USER` with real profile data from `AuthContext`; wire logout to `supabase.auth.signOut()`
+
+---
+
+## Implementation Order
+1. Enable Lovable Cloud
+2. Create migration: profiles table, user_roles table, enum, has_role function, RLS policies, trigger
+3. Create AuthContext with session management
+4. Update AuthCard with login/signup form
+5. Add route protection (auth guard)
+6. Wire ProfilePage to real data
+7. Add ResetPassword page
+
+This gives us a solid foundation. After this, we'll move on to **Step 2: Real-time Chat** with persistent messages.
 
