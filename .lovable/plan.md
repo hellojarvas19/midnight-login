@@ -1,58 +1,83 @@
 
-## Add Animations Across the Website
 
-### Current Animation State
-The app already has:
-- `animate-card-entrance` (fade + scale up) on page sections
-- `animate-ping` live dot on the Home page
-- Animated counter / progress bar on stat cards
-- CSS keyframes for float orbs, particle drift, pulse glow, water ripple
+# Add Telegram-Style Features to Chat Page
 
-### What's Missing / Where to Add Polish
-The request is broad — "add animations to the website." Based on the UI structure, here are the high-impact additions across all three pages and the shared layout:
+This plan adds the most recognizable and useful Telegram group features that are currently missing from the Chat page.
 
 ---
 
-### 1. Dashboard Layout — Staggered Header Entrance
-The top bar (hamburger + title + badge) currently has no entrance animation. Add a slide-down + fade-in so the header appears smoothly when the dashboard loads.
+## New Features
 
-### 2. Dashboard — Page Transition Fade
-When switching between Home / Checker / Profile via the sidebar, the new page content just snaps in. Add a quick `opacity` + `translateY` crossfade transition (using a `key`-driven re-render with CSS transition) so pages slide-in smoothly.
+### 1. Member List / Info Panel (slide-out drawer)
+- A toggleable side panel (or overlay on mobile) showing group info: name, description, member count, and a scrollable member list with online status dots and role badges (Admin/Member).
+- Triggered by clicking the header area or a new info icon button.
 
-### 3. Home Page — Stat Cards Hover Lift
-The three stat cards have entrance animations but no hover interactivity. Add a `translateY(-4px)` lift + subtle magenta glow intensification on hover using inline `onMouseEnter`/`onMouseLeave` state.
+### 2. Unread Messages Separator and "Scroll to Bottom" Button
+- An "Unread Messages" divider bar that appears between the last-read message and new ones.
+- A floating "scroll to bottom" button (with a chevron-down icon) that appears when the user scrolls up. Shows an unread count badge when there are new messages below.
 
-### 4. Home Page — Activity Feed Row Slide-In
-New live activity entries currently use `card-entrance` but appear abruptly. Enhance to slide in from the top with a smooth `max-height` + `opacity` transition so new entries push the list down gracefully.
+### 3. Forward Message
+- A new "Forward" option in the message context menu (the three-dot dropdown).
+- Opens a small modal to pick a simulated channel/user to forward to, then shows a toast confirmation.
 
-### 5. Checker Page — Run Button Pulse
-The "Run" button has no idle animation. Add a slow `animate-pulse-glow` (already defined in CSS) that runs when the button is ready-to-run (gateway selected + cards loaded), drawing attention to the CTA.
+### 4. Copy Message Text
+- A new "Copy" option in the message context menu that copies the text content to the clipboard and shows a brief toast/checkmark feedback.
 
-### 6. Checker Page — Result Row Slide-In
-Each card result row appears instantly. Add a staggered `card-entrance` animation with an `animationDelay` based on the row index (capped at ~20 rows to avoid delay overload).
+### 5. Link Preview Cards
+- When a message contains a URL, render a styled preview card below the text showing a placeholder domain, title, and description (simulated since there's no backend to fetch metadata).
 
-### 7. Profile Page — Avatar Ring Pulse
-The profile avatar has a static magenta border. Add the existing `logo-ring-pulse` keyframe as a continuous animation so the border slowly breathes in and out, giving a "live presence" feel.
+### 6. Poll Creation and Voting
+- A "Create Poll" button (bar-chart icon) in the input toolbar.
+- Opens a small modal to enter a question and 2-4 options.
+- Polls render as special message bubbles with votable option bars showing percentages and vote counts. Users can vote once per poll.
 
-### 8. Profile Page — Credits Bar Animated Fill
-The credit usage bar currently has `transition: width 1s` but only fills on mount. Trigger the fill via an `IntersectionObserver`-style `useEffect` + a small `useState` so it animates from 0% to 7% when the card enters the viewport.
+### 7. User Profile Popup
+- Clicking on a user's avatar or name shows a small popover card with: avatar, username, role badge, join date, and a "Send Message" button (simulated).
 
-### 9. AppSidebar — Nav Item Hover Glow
-Navigation items in the sidebar have hover color changes but no glow effect. Add a `box-shadow` glow transition on hover so the active/hovered nav item radiates magenta light.
+### 8. Mute / Notification Toggle
+- A bell/bell-off icon button in the header to toggle muted state.
+- When muted, a small "Muted" badge appears next to the group name, and a toast confirms the action.
 
 ---
 
-### Technical Plan
+## Technical Details
 
-**Files to edit:**
-- `src/pages/Dashboard.tsx` — header slide-down, page transition fade
-- `src/pages/dashboard/HomePage.tsx` — stat card hover lift, activity row slide-in
-- `src/pages/dashboard/CheckerPage.tsx` — run button pulse, result row staggered entrance
-- `src/pages/dashboard/ProfilePage.tsx` — avatar ring pulse, credits bar animated fill
-- `src/components/dashboard/AppSidebar.tsx` — nav item hover glow
+### File Changes
 
-**New CSS (added to `src/index.css`):**
-- `@keyframes slide-down-fade` — for the header entrance
-- `@keyframes nav-glow-pulse` — for sidebar hover state
+**`src/pages/dashboard/ChatPage.tsx`** (sole file modified):
 
-All other animations reuse existing keyframes already defined in `index.css`.
+1. **New Types**:
+   - Add `"poll"` to `MessageType`.
+   - Add `PollOption` interface (`{ id, text, votes }`) and `pollData` field to `ChatMessage`.
+   - Add `"forward"` action type for the context menu.
+
+2. **New Components** (defined within the same file, following existing patterns):
+   - `MemberPanel` - Slide-out overlay with member list, online indicators, role badges.
+   - `ScrollToBottomButton` - Floating FAB with unread badge, appears on scroll-up.
+   - `UnreadSeparator` - Thin styled divider with "Unread Messages" text.
+   - `ForwardModal` - Small channel picker modal (simulated channels list).
+   - `PollBubble` - Special bubble for polls with animated vote bars.
+   - `PollCreateModal` - Form modal for creating polls (question + options).
+   - `UserProfilePopover` - Avatar-click popover card.
+   - `LinkPreviewCard` - Styled card for URL detection in text messages.
+
+3. **State Additions** in `ChatPage`:
+   - `isMuted` (boolean) for notification toggle.
+   - `showMembers` (boolean) for member panel.
+   - `showScrollBtn` (boolean) driven by scroll position observer.
+   - `unreadCount` (number) for the scroll-to-bottom badge.
+   - `forwardTarget` (ChatMessage | null) for forward modal.
+   - `showPollModal` (boolean) for poll creation.
+   - `profileTarget` (sender info | null) for user profile popup.
+
+4. **Updated Components**:
+   - `MessageBubble`: Add "Copy" and "Forward" to the dropdown menu. Add link detection and `LinkPreviewCard` rendering. Add `UserProfilePopover` trigger on avatar/name click.
+   - Header: Add mute toggle button (Bell/BellOff icon) and info/members button.
+   - Input bar: Add poll creation button (BarChart3 icon).
+   - Message list wrapper: Add scroll position listener for the floating button and unread separator logic.
+
+5. **New Icons** (from lucide-react):
+   - `Bell`, `BellOff`, `BarChart3`, `Copy`, `Forward`, `ChevronDown`, `Users`, `ExternalLink`, `Info`
+
+All new components follow the existing glassmorphism styling with `hsla()` color tokens, gold accents for admin elements, and the same animation patterns (card-entrance, reply-slide-in).
+
