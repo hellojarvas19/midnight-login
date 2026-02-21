@@ -882,7 +882,7 @@ const ChatPage = () => {
   const scrollToPinned = () => pinnedMsgRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
 
   return (
-    <div className="flex flex-col h-full" style={{ height: "calc(100vh - 160px)" }}>
+    <div className="flex flex-col h-full" style={{ height: "calc(100vh - 80px)" }}>
       <div className="glass-card animate-card-entrance rounded-2xl overflow-hidden flex flex-col relative" style={{ animationDelay: "0ms", animationFillMode: "both", flex: 1, minHeight: 0 }}>
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b shrink-0" style={{ borderColor: "hsla(315,30%,25%,0.2)" }}>
