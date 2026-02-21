@@ -55,36 +55,25 @@ const AuthCard = () => {
         navigate("/dashboard");
       }
     };
-    return () => {
-      delete (window as any).onTelegramAuth;
-    };
-  }, [signInWithTelegram, navigate]);
 
-  const handleContinueWithTelegram = () => {
-    // Open Telegram login widget popup
-    const botUsername = TELEGRAM_BOT_USERNAME;
-    const origin = window.location.origin;
-    const popup = window.open(
-      `https://oauth.telegram.org/auth?bot_id=&scope=&public_key=&nonce=&origin=${encodeURIComponent(origin)}`,
-      "telegram_login",
-      "width=550,height=470"
-    );
-
-    // Use the Telegram Login Widget script approach instead
-    // Inject script dynamically
+    // Inject Telegram Login Widget script
     const container = document.getElementById("telegram-login-container");
-    if (container) {
-      container.innerHTML = "";
+    if (container && container.childElementCount === 0) {
       const script = document.createElement("script");
       script.src = "https://telegram.org/js/telegram-widget.js?22";
-      script.setAttribute("data-telegram-login", botUsername);
+      script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
       script.setAttribute("data-size", "large");
+      script.setAttribute("data-radius", "12");
       script.setAttribute("data-onauth", "onTelegramAuth(user)");
       script.setAttribute("data-request-access", "write");
       script.async = true;
       container.appendChild(script);
     }
-  };
+
+    return () => {
+      delete (window as any).onTelegramAuth;
+    };
+  }, [signInWithTelegram, navigate]);
 
   return (
     <div
@@ -108,32 +97,16 @@ const AuthCard = () => {
       {/* Error */}
       {error && <p className="text-xs text-center mb-4" style={{ color: "hsl(0,75%,60%)" }}>{error}</p>}
 
-      {/* Telegram Login Widget Container */}
-      <div id="telegram-login-container" className="flex justify-center mb-4" />
+      {/* Loading state */}
+      {loading && (
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <Loader2 size={16} className="animate-spin" style={{ color: "hsl(var(--primary))" }} />
+          <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>Authenticating...</span>
+        </div>
+      )}
 
-      {/* Continue with Telegram button */}
-      <button
-        type="button"
-        disabled={loading}
-        onClick={handleContinueWithTelegram}
-        className="btn-shimmer w-full flex items-center justify-center gap-3 rounded-xl py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-        style={{
-          background: "linear-gradient(135deg, hsl(200,80%,50%), hsl(200,85%,42%))",
-          color: "#fff",
-          boxShadow: "0 4px 32px hsla(200,80%,50%,0.35), 0 0 80px hsla(200,80%,50%,0.1)",
-          border: "1px solid hsla(200,70%,60%,0.25)",
-          opacity: loading ? 0.7 : 1,
-        }}
-      >
-        {loading ? (
-          <Loader2 size={16} className="animate-spin" />
-        ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.492-1.302.48-.428-.013-1.252-.242-1.865-.442-.751-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-          </svg>
-        )}
-        Continue with Telegram
-      </button>
+      {/* Telegram Login Widget Container — the only login button */}
+      <div id="telegram-login-container" className="flex justify-center mb-4" />
 
       {/* Footer note */}
       <p className="text-center text-xs mt-5" style={{ color: "hsl(var(--muted-foreground))" }}>
