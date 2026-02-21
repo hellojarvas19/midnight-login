@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle, Gem } from "lucide-react";
+import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle, Diamond } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import HomePage from "@/pages/dashboard/HomePage";
@@ -24,7 +24,7 @@ const SECTION_ICON: Record<Section, typeof Home> = {
   home:    Home,
   chat:    MessageCircle,
   checker: CreditCard,
-  plans:   Gem,
+  plans:   Diamond,
   profile: Crown,
 };
 

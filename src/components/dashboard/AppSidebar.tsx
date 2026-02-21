@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, CreditCard, ChevronLeft, ChevronRight, Crown, Zap, MessageCircle, Gem } from "lucide-react";
+import { Home, CreditCard, ChevronLeft, ChevronRight, Crown, Zap, MessageCircle, Diamond } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import logoCharacter from "@/assets/logo-character.jpg";
 
@@ -19,7 +19,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: typeof Home }[] = [
   { id: "home",    label: "Home",    Icon: Home          },
   { id: "chat",    label: "Chat",    Icon: MessageCircle },
   { id: "checker", label: "Checker", Icon: CreditCard    },
-  { id: "plans",   label: "Plans",   Icon: Gem           },
+  { id: "plans",   label: "Plans",   Icon: Diamond       },
   { id: "profile", label: "Profile", Icon: Crown         },
 ];
 
