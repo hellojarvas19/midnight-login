@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle, Diamond } from "lucide-react";
+import { Navigate } from "react-router-dom";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import HomePage from "@/pages/dashboard/HomePage";
@@ -8,6 +9,7 @@ import CheckerPage from "@/pages/dashboard/CheckerPage";
 import ProfilePage from "@/pages/dashboard/ProfilePage";
 import PlansPage from "@/pages/dashboard/PlansPage";
 import { PlanProvider } from "@/contexts/PlanContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Section = "home" | "chat" | "checker" | "plans" | "profile";
 
@@ -43,6 +45,7 @@ const PAGE_NODE: Record<Section, React.ReactNode> = {
 };
 
 const Dashboard = () => {
+  const { user, loading } = useAuth();
   const [active, setActive]                   = useState<Section>("home");
   const [collapsed, setCollapsed]             = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -167,6 +170,10 @@ const Dashboard = () => {
     return () => el.removeEventListener("touchmove", stableHandleContentTouchMove);
   }, [stableHandleContentTouchMove]);
 
+
+  // Auth guard
+  if (!loading && !user) return <Navigate to="/" replace />;
+  if (loading) return null;
 
   return (
     <PlanProvider>
