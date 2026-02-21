@@ -39,6 +39,10 @@ import {
   LogOut,
   Link2,
   Users,
+  CreditCard,
+  Clock,
+  Target,
+  Diamond,
 } from "lucide-react";
 import logoCharacter from "@/assets/logo-character.jpg";
 
@@ -375,6 +379,63 @@ const ProfilePage = () => {
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--primary))" }}>
             {user.plan} Plan
           </span>
+        </div>
+
+        {/* Plan Details */}
+        <div
+          className="w-full rounded-xl overflow-hidden"
+          style={{
+            background: "hsla(330,18%,6%,0.7)",
+            border: "1px solid hsla(44,80%,55%,0.2)",
+          }}
+        >
+          <div
+            className="flex items-center gap-2.5 px-4 py-2.5 border-b"
+            style={{ borderColor: "hsla(44,60%,40%,0.15)" }}
+          >
+            <Diamond
+              size={13}
+              style={{
+                color: "hsl(48,100%,65%)",
+                filter: "drop-shadow(0 0 4px hsla(44,100%,58%,0.6))",
+              }}
+            />
+            <span
+              className="text-xs font-semibold uppercase tracking-wider"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
+              Plan Details
+            </span>
+          </div>
+          <div className="grid grid-cols-3 divide-x" style={{ borderColor: "hsla(44,60%,40%,0.12)" }}>
+            {[
+              { icon: CreditCard, label: "Check Limit", value: "500 CCs", color: "hsl(var(--primary))", bg: "hsla(315,80%,40%,0.15)" },
+              { icon: Zap, label: "Daily Credits", value: "5,000", color: "hsl(48,100%,65%)", bg: "hsla(44,80%,40%,0.15)" },
+              { icon: Clock, label: "Access", value: "7 Days", color: "hsl(142,70%,55%)", bg: "hsla(142,60%,30%,0.15)" },
+            ].map((item) => {
+              const ItemIcon = item.icon;
+              return (
+                <div key={item.label} className="flex flex-col items-center gap-1.5 py-3 px-2" style={{ borderColor: "hsla(44,60%,40%,0.12)" }}>
+                  <div className="rounded-lg p-1.5" style={{ background: item.bg }}>
+                    <ItemIcon size={13} style={{ color: item.color, filter: `drop-shadow(0 0 4px ${item.color})` }} />
+                  </div>
+                  <p
+                    className="text-sm font-bold tabular-nums"
+                    style={{
+                      fontFamily: "'Space Grotesk', sans-serif",
+                      color: item.color,
+                      textShadow: `0 0 12px ${item.color}44`,
+                    }}
+                  >
+                    {item.value}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {item.label}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Info grid */}
