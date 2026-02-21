@@ -2,3 +2,6 @@ project_id = "nfvcgqggbkfflnvyipgu"
 
 [functions.telegram-auth]
 verify_jwt = false
+
+[functions.telegram-bot-webhook]
+verify_jwt = false
