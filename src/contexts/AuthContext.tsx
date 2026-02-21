@@ -5,6 +5,8 @@ import type { User, Session } from "@supabase/supabase-js";
 interface Profile {
   id: string;
   username: string;
+  first_name: string | null;
+  last_name: string | null;
   telegram_id: string | null;
   avatar_url: string | null;
   credits: number;
@@ -18,8 +20,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, username?: string) => Promise<{ error: Error | null }>;
+  signInWithTelegram: (tgUser: any) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -46,13 +47,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user, fetchProfile]);
 
   useEffect(() => {
-    // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid Supabase deadlock
           setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
@@ -61,7 +60,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // THEN check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -74,21 +72,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error as Error | null };
-  };
+  const signInWithTelegram = async (tgUser: any) => {
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/telegram-auth`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(tgUser),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: new Error(data.error || "Authentication failed") };
+      }
 
-  const signUp = async (email: string, password: string, username?: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { username: username || email.split("@")[0] },
-      },
-    });
-    return { error: error as Error | null };
+      // Set the session in the Supabase client
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
   };
 
   const signOut = async () => {
@@ -97,7 +106,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signInWithTelegram, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

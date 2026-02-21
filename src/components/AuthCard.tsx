@@ -1,24 +1,19 @@
-import { useRef, useCallback, useState } from "react";
-import { Mail, Lock, User, Loader2 } from "lucide-react";
+import { useRef, useCallback, useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { LogoMark } from "./LogoMark";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 
-/* ─── Main auth card ─── */
+const TELEGRAM_BOT_USERNAME = "ChkXdAdmBot";
+
 const AuthCard = () => {
   const cardRef = useRef<HTMLDivElement>(null);
   const tiltRef = useRef({ x: 0, y: 0, raf: 0 });
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signInWithTelegram } = useAuth();
 
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const card = cardRef.current;
@@ -47,45 +42,48 @@ const AuthCard = () => {
     });
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
-    setLoading(true);
-
-    if (mode === "forgot") {
-      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      setLoading(false);
-      if (err) setError(err.message);
-      else setMessage("Check your email for a reset link!");
-      return;
-    }
-
-    if (mode === "signin") {
-      const { error: err } = await signIn(email, password);
+  useEffect(() => {
+    // Expose the global callback for Telegram Login Widget
+    (window as any).onTelegramAuth = async (tgUser: any) => {
+      setLoading(true);
+      setError("");
+      const { error: err } = await signInWithTelegram(tgUser);
       setLoading(false);
       if (err) {
         setError(err.message);
       } else {
         navigate("/dashboard");
       }
-    } else {
-      const { error: err } = await signUp(email, password, username);
-      setLoading(false);
-      if (err) {
-        setError(err.message);
-      } else {
-        setMessage("Check your email to confirm your account!");
-      }
-    }
-  };
+    };
+    return () => {
+      delete (window as any).onTelegramAuth;
+    };
+  }, [signInWithTelegram, navigate]);
 
-  const inputStyle = {
-    background: "hsla(330,18%,8%,0.8)",
-    border: "1px solid hsla(315,30%,25%,0.3)",
-    color: "hsl(var(--foreground))",
+  const handleContinueWithTelegram = () => {
+    // Open Telegram login widget popup
+    const botUsername = TELEGRAM_BOT_USERNAME;
+    const origin = window.location.origin;
+    const popup = window.open(
+      `https://oauth.telegram.org/auth?bot_id=&scope=&public_key=&nonce=&origin=${encodeURIComponent(origin)}`,
+      "telegram_login",
+      "width=550,height=470"
+    );
+
+    // Use the Telegram Login Widget script approach instead
+    // Inject script dynamically
+    const container = document.getElementById("telegram-login-container");
+    if (container) {
+      container.innerHTML = "";
+      const script = document.createElement("script");
+      script.src = "https://telegram.org/js/telegram-widget.js?22";
+      script.setAttribute("data-telegram-login", botUsername);
+      script.setAttribute("data-size", "large");
+      script.setAttribute("data-onauth", "onTelegramAuth(user)");
+      script.setAttribute("data-request-access", "write");
+      script.async = true;
+      container.appendChild(script);
+    }
   };
 
   return (
@@ -103,106 +101,39 @@ const AuthCard = () => {
           0xAdam
         </h1>
         <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-          {mode === "forgot" ? "Reset your password" : "Welcome To 0xAdam Checker"}
+          Welcome To 0xAdam Checker
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
-        {/* Username (signup only) */}
-        {mode === "signup" && (
-          <div className="relative">
-            <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "hsl(var(--muted-foreground))" }} />
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none focus:ring-1 focus:ring-primary/40 transition-all"
-              style={inputStyle}
-            />
-          </div>
+      {/* Error */}
+      {error && <p className="text-xs text-center mb-4" style={{ color: "hsl(0,75%,60%)" }}>{error}</p>}
+
+      {/* Telegram Login Widget Container */}
+      <div id="telegram-login-container" className="flex justify-center mb-4" />
+
+      {/* Continue with Telegram button */}
+      <button
+        type="button"
+        disabled={loading}
+        onClick={handleContinueWithTelegram}
+        className="btn-shimmer w-full flex items-center justify-center gap-3 rounded-xl py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+        style={{
+          background: "linear-gradient(135deg, hsl(200,80%,50%), hsl(200,85%,42%))",
+          color: "#fff",
+          boxShadow: "0 4px 32px hsla(200,80%,50%,0.35), 0 0 80px hsla(200,80%,50%,0.1)",
+          border: "1px solid hsla(200,70%,60%,0.25)",
+          opacity: loading ? 0.7 : 1,
+        }}
+      >
+        {loading ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.492-1.302.48-.428-.013-1.252-.242-1.865-.442-.751-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+          </svg>
         )}
-
-        {/* Email */}
-        <div className="relative">
-          <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "hsl(var(--muted-foreground))" }} />
-          <input
-            type="email"
-            placeholder="Email address"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none focus:ring-1 focus:ring-primary/40 transition-all"
-            style={inputStyle}
-          />
-        </div>
-
-        {/* Password (not for forgot mode) */}
-        {mode !== "forgot" && (
-          <div className="relative">
-            <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "hsl(var(--muted-foreground))" }} />
-            <input
-              type="password"
-              placeholder="Password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none focus:ring-1 focus:ring-primary/40 transition-all"
-              style={inputStyle}
-            />
-          </div>
-        )}
-
-        {/* Error / Success */}
-        {error && <p className="text-xs text-center" style={{ color: "hsl(0,75%,60%)" }}>{error}</p>}
-        {message && <p className="text-xs text-center" style={{ color: "hsl(142,70%,55%)" }}>{message}</p>}
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-shimmer w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-          style={{
-            background: "linear-gradient(135deg, hsl(315,90%,45%), hsl(315,90%,55%))",
-            color: "#fff",
-            boxShadow: "0 4px 32px hsla(315,90%,50%,0.35), 0 0 80px hsla(315,90%,50%,0.1)",
-            border: "1px solid hsla(315,80%,60%,0.25)",
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
-          {loading && <Loader2 size={16} className="animate-spin" />}
-          {mode === "signin" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
-        </button>
-      </form>
-
-      {/* Mode toggle */}
-      <div className="flex flex-col items-center gap-2 mt-5">
-        {mode !== "forgot" && (
-          <button
-            type="button"
-            onClick={() => { setMode("forgot"); setError(""); setMessage(""); }}
-            className="text-xs transition-colors hover:underline"
-            style={{ color: "hsl(var(--muted-foreground))" }}
-          >
-            Forgot password?
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === "signin" ? "signup" : "signin");
-            setError("");
-            setMessage("");
-          }}
-          className="text-xs transition-colors"
-          style={{ color: "hsl(var(--muted-foreground))" }}
-        >
-          {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
-          <span className="font-semibold" style={{ color: "hsl(var(--primary))" }}>
-            {mode === "signin" ? "Sign Up" : "Sign In"}
-          </span>
-        </button>
-      </div>
+        Continue with Telegram
+      </button>
 
       {/* Footer note */}
       <p className="text-center text-xs mt-5" style={{ color: "hsl(var(--muted-foreground))" }}>

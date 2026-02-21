@@ -48,18 +48,18 @@ import {
 import logoCharacter from "@/assets/logo-character.jpg";
 import { usePlan } from "@/contexts/PlanContext";
 
-// ─── Mock Telegram user data ───────────────────────────────────────────────
-const MOCK_USER = {
-  name: "0xAdam",
-  telegramId: "1047382910",
-  username: "@0xadam_checker",
+// Fallback defaults
+const FALLBACK = {
+  name: "User",
+  telegramId: "—",
+  username: "@unknown",
   avatarUrl: logoCharacter,
-  joinedDate: "Jan 2026",
-  credits: 2_480,
-  plan: "Pro",
-  referralCode: "ref_0xadam",
-  referralCount: 12,
-  referralLink: "https://t.me/OxAdamCheckerBot?start=ref_0xadam",
+  joinedDate: "—",
+  credits: 0,
+  plan: "Free",
+  referralCode: "",
+  referralCount: 0,
+  referralLink: "",
 };
 
 type TxType = "credit" | "debit" | "bonus";
@@ -184,18 +184,22 @@ const ProfilePage = () => {
   const [loggedOut, setLoggedOut]         = useState(false);
   const [creditsBarWidth, setCreditsBarWidth] = useState(0);
 
-  // Merge real profile with fallback mock data
+  // Merge real profile with fallback
+  const displayName = profile?.first_name
+    ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ""}`
+    : profile?.username || FALLBACK.name;
+
   const user = {
-    name: profile?.username || MOCK_USER.name,
-    telegramId: profile?.telegram_id || MOCK_USER.telegramId,
-    username: profile?.username ? `@${profile.username}` : MOCK_USER.username,
-    avatarUrl: profile?.avatar_url || MOCK_USER.avatarUrl,
-    joinedDate: profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : MOCK_USER.joinedDate,
-    credits: profile?.credits ?? MOCK_USER.credits,
+    name: displayName,
+    telegramId: profile?.telegram_id || FALLBACK.telegramId,
+    username: profile?.username ? `@${profile.username}` : FALLBACK.username,
+    avatarUrl: profile?.avatar_url || FALLBACK.avatarUrl,
+    joinedDate: profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : FALLBACK.joinedDate,
+    credits: profile?.credits ?? FALLBACK.credits,
     plan: "Pro",
-    referralCode: profile?.referral_code || MOCK_USER.referralCode,
+    referralCode: profile?.referral_code || FALLBACK.referralCode,
     referralCount: 0,
-    referralLink: `https://t.me/OxAdamCheckerBot?start=${profile?.referral_code || MOCK_USER.referralCode}`,
+    referralLink: profile?.referral_code ? `https://t.me/ChkXdAdmBot?start=${profile.referral_code}` : FALLBACK.referralLink,
   };
 
   // Animated counters
