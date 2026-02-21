@@ -3,23 +3,17 @@ import {
   MessageCircle, Send, Image as ImageIcon, Mic,
   Pin, X, Play, Pause, MoreVertical, Check, CheckCheck,
   Crown, Reply, Search, ChevronUp, ChevronDown, Trash2, Pencil,
-  Bell, BellOff, BarChart3, Copy, Forward, Users, ExternalLink, Info,
+  Bell, BellOff, Copy, Users, ExternalLink, Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /* ─── Types ─── */
-type MessageType = "text" | "image" | "audio" | "poll";
+type MessageType = "text" | "image" | "audio";
 type SenderRole  = "user" | "admin";
 type Emoji       = "👍" | "❤️" | "😂" | "🔥";
 
 const EMOJI_LIST: Emoji[] = ["👍", "❤️", "😂", "🔥"];
-
-interface PollOption {
-  id: string;
-  text: string;
-  votes: number;
-}
 
 interface QuotedMessage {
   id: string;
@@ -44,7 +38,6 @@ interface ChatMessage {
   reactions: Partial<Record<Emoji, number>>;
   myReaction?: Emoji;
   quotedMessage?: QuotedMessage;
-  pollData?: { question: string; options: PollOption[]; votedOptionId?: string };
 }
 
 /* ─── Member data ─── */
@@ -56,13 +49,6 @@ const MEMBERS = [
   { name: "ShadowMint", role: "user" as SenderRole, online: true, joined: "Jun 2024" },
   { name: "PhantomDev", role: "user" as SenderRole, online: false, joined: "Jul 2024" },
   { name: "ByteRunner", role: "user" as SenderRole, online: true, joined: "Aug 2024" },
-];
-
-const FORWARD_CHANNELS = [
-  { id: "c1", name: "📢 Announcements" },
-  { id: "c2", name: "💬 General" },
-  { id: "c3", name: "🔧 Support" },
-  { id: "c4", name: "👤 Saved Messages" },
 ];
 
 /* ─── Seed messages ─── */
@@ -126,7 +112,6 @@ function timeAgo(date: Date) {
 function quotePreview(msg: ChatMessage): string {
   if (msg.type === "image") return "📷 Image";
   if (msg.type === "audio") return "🎤 Voice message";
-  if (msg.type === "poll") return "📊 Poll";
   return msg.content.length > 80 ? msg.content.slice(0, 80) + "…" : msg.content;
 }
 
@@ -179,182 +164,6 @@ const LinkPreviewCard = ({ url }: { url: string }) => {
     </a>
   );
 };
-
-/* ─── Poll Bubble ─── */
-const PollBubble = ({
-  msg,
-  onVote,
-}: {
-  msg: ChatMessage;
-  onVote: (msgId: string, optionId: string) => void;
-}) => {
-  const poll = msg.pollData!;
-  const totalVotes = poll.options.reduce((s, o) => s + o.votes, 0);
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
-        📊 {poll.question}
-      </p>
-      {poll.options.map((opt) => {
-        const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
-        const isVoted = poll.votedOptionId === opt.id;
-        return (
-          <button
-            key={opt.id}
-            onClick={() => !poll.votedOptionId && onVote(msg.id, opt.id)}
-            disabled={!!poll.votedOptionId}
-            className="relative w-full rounded-lg overflow-hidden text-left transition-all active:scale-[0.98]"
-            style={{
-              background: "hsla(330,15%,8%,0.6)",
-              border: isVoted ? "1px solid hsla(315,60%,55%,0.5)" : "1px solid hsla(315,25%,25%,0.2)",
-              padding: "8px 12px",
-              cursor: poll.votedOptionId ? "default" : "pointer",
-            }}
-          >
-            {/* Bar fill */}
-            <div
-              className="absolute inset-0 rounded-lg transition-all duration-700"
-              style={{
-                width: poll.votedOptionId ? `${pct}%` : "0%",
-                background: isVoted ? "hsla(315,80%,40%,0.25)" : "hsla(315,40%,30%,0.15)",
-              }}
-            />
-            <div className="relative flex items-center justify-between gap-2">
-              <span className="text-xs font-medium" style={{ color: "hsl(var(--foreground))" }}>
-                {isVoted && "✓ "}{opt.text}
-              </span>
-              {poll.votedOptionId && (
-                <span className="text-xs tabular-nums font-semibold" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  {pct}% · {opt.votes}
-                </span>
-              )}
-            </div>
-          </button>
-        );
-      })}
-      <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.6 }}>
-        {totalVotes} vote{totalVotes !== 1 ? "s" : ""}
-        {poll.votedOptionId ? " · You voted" : " · Tap to vote"}
-      </p>
-    </div>
-  );
-};
-
-/* ─── Poll Create Modal ─── */
-const PollCreateModal = ({
-  onClose,
-  onCreate,
-}: {
-  onClose: () => void;
-  onCreate: (question: string, options: string[]) => void;
-}) => {
-  const [question, setQuestion] = useState("");
-  const [opts, setOpts] = useState(["", ""]);
-
-  const addOption = () => { if (opts.length < 4) setOpts([...opts, ""]); };
-  const updateOption = (i: number, v: string) => { const n = [...opts]; n[i] = v; setOpts(n); };
-
-  const valid = question.trim() && opts.filter((o) => o.trim()).length >= 2;
-
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-      onClick={onClose}
-      style={{ background: "hsla(0,0%,0%,0.6)", backdropFilter: "blur(6px)" }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-2xl p-5 flex flex-col gap-4"
-        style={{
-          background: "hsla(330,20%,6%,0.97)",
-          border: "1px solid hsla(315,40%,30%,0.35)",
-          boxShadow: "0 20px 60px hsla(330,30%,2%,0.8)",
-          animation: "card-entrance 0.3s cubic-bezier(0.34,1.56,0.64,1) both",
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold" style={{ color: "hsl(var(--foreground))" }}>📊 Create Poll</p>
-          <button onClick={onClose} className="p-1 rounded-md hover:opacity-70"><X size={14} style={{ color: "hsl(var(--muted-foreground))" }} /></button>
-        </div>
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask a question…"
-          className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-          style={{ background: "hsla(330,15%,10%,0.8)", border: "1px solid hsla(315,30%,25%,0.3)", color: "hsl(var(--foreground))" }}
-        />
-        {opts.map((o, i) => (
-          <input
-            key={i}
-            value={o}
-            onChange={(e) => updateOption(i, e.target.value)}
-            placeholder={`Option ${i + 1}`}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-            style={{ background: "hsla(330,15%,10%,0.8)", border: "1px solid hsla(315,30%,25%,0.2)", color: "hsl(var(--foreground))" }}
-          />
-        ))}
-        {opts.length < 4 && (
-          <button onClick={addOption} className="text-xs font-medium self-start" style={{ color: "hsl(315,90%,65%)" }}>+ Add option</button>
-        )}
-        <button
-          onClick={() => { if (valid) { onCreate(question.trim(), opts.filter((o) => o.trim())); onClose(); } }}
-          disabled={!valid}
-          className="w-full rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-95 disabled:opacity-30"
-          style={{ background: "linear-gradient(135deg, hsl(315,95%,45%), hsl(315,85%,58%))", color: "#fff", boxShadow: "0 0 14px hsla(315,90%,55%,0.35)" }}
-        >
-          Create Poll
-        </button>
-      </div>
-    </div>
-  );
-};
-
-/* ─── Forward Modal ─── */
-const ForwardModal = ({
-  msg,
-  onClose,
-}: {
-  msg: ChatMessage;
-  onClose: () => void;
-}) => (
-  <div
-    className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-    onClick={onClose}
-    style={{ background: "hsla(0,0%,0%,0.6)", backdropFilter: "blur(6px)" }}
-  >
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className="w-full max-w-xs rounded-2xl p-5 flex flex-col gap-3"
-      style={{
-        background: "hsla(330,20%,6%,0.97)",
-        border: "1px solid hsla(315,40%,30%,0.35)",
-        boxShadow: "0 20px 60px hsla(330,30%,2%,0.8)",
-        animation: "card-entrance 0.3s cubic-bezier(0.34,1.56,0.64,1) both",
-      }}
-    >
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold" style={{ color: "hsl(var(--foreground))" }}>Forward message</p>
-        <button onClick={onClose} className="p-1 rounded-md hover:opacity-70"><X size={14} style={{ color: "hsl(var(--muted-foreground))" }} /></button>
-      </div>
-      <p className="text-xs truncate px-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-        "{msg.type === "poll" ? "📊 Poll" : msg.content.slice(0, 60)}"
-      </p>
-      {FORWARD_CHANNELS.map((ch) => (
-        <button
-          key={ch.id}
-          onClick={() => {
-            toast.success(`Forwarded to ${ch.name}`);
-            onClose();
-          }}
-          className="w-full text-left rounded-xl px-3 py-2.5 text-sm transition-all hover:opacity-80 active:scale-[0.98]"
-          style={{ background: "hsla(330,15%,10%,0.7)", border: "1px solid hsla(315,25%,25%,0.2)", color: "hsl(var(--foreground))" }}
-        >
-          {ch.name}
-        </button>
-      ))}
-    </div>
-  </div>
-);
 
 /* ─── Member Panel ─── */
 const MemberPanel = ({ onClose }: { onClose: () => void }) => (
@@ -663,15 +472,13 @@ const PinnedBanner = ({ message, onJump }: { message: ChatMessage; onJump: () =>
 
 /* ─── Message bubble ─── */
 const MessageBubble = ({
-  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, onDelete, onEdit, onForward, onVotePoll, pinnedRef, searchQuery = "",
+  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, onDelete, onEdit, pinnedRef, searchQuery = "",
 }: {
   msg: ChatMessage; isOwn: boolean; isAdmin: boolean;
   onPin: (id: string) => void; onUnpin: (id: string) => void;
   onReact: (id: string, emoji: Emoji) => void; onReply: (msg: ChatMessage) => void;
   onScrollTo: (id: string) => void; onDelete: (id: string) => void;
   onEdit: (id: string, newContent: string) => void;
-  onForward: (msg: ChatMessage) => void;
-  onVotePoll: (msgId: string, optionId: string) => void;
   pinnedRef?: (el: HTMLDivElement | null) => void; searchQuery?: string;
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -787,7 +594,6 @@ const MessageBubble = ({
                   </div>
                 )}
                 {msg.type === "audio" && <AudioPlayer label={msg.content} />}
-                {msg.type === "poll" && <PollBubble msg={msg} onVote={onVotePoll} />}
               </>
             )}
           </div>
@@ -807,12 +613,6 @@ const MessageBubble = ({
               {msg.type === "text" && !msg.deleted && (
                 <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors" style={{ color: "hsl(170,70%,60%)" }} onClick={handleCopy}>
                   <Copy size={12} /> Copy
-                </button>
-              )}
-              {/* Forward */}
-              {!msg.deleted && (
-                <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors" style={{ color: "hsl(270,70%,70%)" }} onClick={() => { onForward(msg); setMenuOpen(false); }}>
-                  <Forward size={12} /> Forward
                 </button>
               )}
               {isAdmin && (
@@ -929,8 +729,6 @@ const ChatPage = () => {
   const [showMembers, setShowMembers] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [forwardTarget, setForwardTarget] = useState<ChatMessage | null>(null);
-  const [showPollModal, setShowPollModal] = useState(false);
   const [lastReadIndex] = useState(3); // simulate: first 4 messages are "read"
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -1072,31 +870,6 @@ const ChatPage = () => {
     }));
   }, []);
 
-  /* Vote on poll */
-  const votePoll = useCallback((msgId: string, optionId: string) => {
-    setMessages((prev) => prev.map((m) => {
-      if (m.id !== msgId || !m.pollData || m.pollData.votedOptionId) return m;
-      return {
-        ...m,
-        pollData: {
-          ...m.pollData,
-          votedOptionId: optionId,
-          options: m.pollData.options.map((o) => o.id === optionId ? { ...o, votes: o.votes + 1 } : o),
-        },
-      };
-    }));
-  }, []);
-
-  /* Create poll */
-  const createPoll = (question: string, options: string[]) => {
-    setMessages((prev) => [...prev, {
-      id: uid(), type: "poll", content: question,
-      sender: MY_NAME, senderRole: IS_ADMIN ? "admin" : "user",
-      timestamp: new Date(), reactions: {},
-      pollData: { question, options: options.map((t, i) => ({ id: `po${i}`, text: t, votes: 0 })) },
-    }]);
-  };
-
   /* Scroll to quoted message */
   const scrollToMessage = (id: string) => {
     const el = msgRefs.current.get(id); if (!el) return;
@@ -1187,7 +960,6 @@ const ChatPage = () => {
                     onPin={pinMessage} onUnpin={unpinMessage} onReact={reactToMessage}
                     onReply={setReplyTarget} onScrollTo={scrollToMessage}
                     onDelete={deleteMessage} onEdit={editMessage}
-                    onForward={setForwardTarget} onVotePoll={votePoll}
                     searchQuery={searchOpen ? searchQuery : ""}
                   />
                 </div>
@@ -1227,10 +999,6 @@ const ChatPage = () => {
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
 
-              {/* Poll button */}
-              <button onClick={() => setShowPollModal(true)} className="rounded-xl p-2.5 shrink-0 transition-all active:scale-90 hover:opacity-80" style={{ background: "hsla(315,60%,30%,0.2)", border: "1px solid hsla(315,40%,40%,0.2)", color: "hsl(var(--muted-foreground))" }} title="Create poll">
-                <BarChart3 size={16} />
-              </button>
 
               <textarea ref={textareaRef} value={text} onChange={(e) => { setText(e.target.value); if (e.target.value) triggerTypingSimulation(); }} onKeyDown={handleKeyDown}
                 placeholder={replyTarget ? `Replying to ${replyTarget.sender}…` : "Type a message…"} rows={1}
@@ -1252,8 +1020,6 @@ const ChatPage = () => {
 
       {/* Modals & Panels */}
       {showMembers && <MemberPanel onClose={() => setShowMembers(false)} />}
-      {forwardTarget && <ForwardModal msg={forwardTarget} onClose={() => setForwardTarget(null)} />}
-      {showPollModal && <PollCreateModal onClose={() => setShowPollModal(false)} onCreate={createPoll} />}
     </div>
   );
 };
