@@ -1,4 +1,5 @@
-import { Crown, Check, Zap, Star, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Crown, Check, Zap, Star, Sparkles, AlertTriangle } from "lucide-react";
 import { usePlan, type PlanId } from "@/contexts/PlanContext";
 
 const PLANS = [
@@ -60,8 +61,72 @@ const PLANS = [
 
 const PlansPage = () => {
   const { activePlan, setPlanId } = usePlan();
+  const [confirmPlan, setConfirmPlan] = useState<PlanId | null>(null);
+  const confirmName = PLANS.find((p) => p.id === confirmPlan)?.name ?? "";
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Confirmation Modal */}
+      {confirmPlan && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "hsla(330,20%,4%,0.7)", backdropFilter: "blur(8px)" }}
+          onClick={() => setConfirmPlan(null)}
+        >
+          <div
+            className="glass-card rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col items-center gap-4"
+            style={{
+              border: "1px solid hsla(44,80%,55%,0.3)",
+              boxShadow: "0 0 40px hsla(44,100%,55%,0.15), 0 0 80px hsla(315,80%,50%,0.1)",
+              animation: "card-entrance 0.25s cubic-bezier(0.34,1.56,0.64,1) both",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="rounded-full p-3"
+              style={{ background: "hsla(44,80%,40%,0.15)", border: "1px solid hsla(44,70%,50%,0.2)" }}
+            >
+              <AlertTriangle size={24} style={{ color: "hsl(48,100%,65%)", filter: "drop-shadow(0 0 6px hsla(44,100%,58%,0.6))" }} />
+            </div>
+            <h3
+              className="text-lg font-bold text-center"
+              style={{ color: "hsl(var(--foreground))" }}
+            >
+              Switch to {confirmName}?
+            </h3>
+            <p className="text-xs text-center" style={{ color: "hsl(var(--muted-foreground))" }}>
+              Your current plan will be replaced with the <strong style={{ color: "hsl(48,100%,68%)" }}>{confirmName}</strong> plan.
+            </p>
+            <div className="flex gap-3 w-full mt-1">
+              <button
+                type="button"
+                onClick={() => setConfirmPlan(null)}
+                className="flex-1 rounded-xl py-2.5 text-sm font-bold transition-all duration-200"
+                style={{
+                  background: "hsla(315,30%,20%,0.4)",
+                  border: "1px solid hsla(315,40%,40%,0.25)",
+                  color: "hsl(var(--muted-foreground))",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPlanId(confirmPlan); setConfirmPlan(null); }}
+                className="flex-1 rounded-xl py-2.5 text-sm font-bold transition-all duration-200"
+                style={{
+                  background: "linear-gradient(135deg, hsl(42,100%,48%), hsl(48,100%,58%))",
+                  border: "1px solid hsla(44,80%,55%,0.5)",
+                  color: "hsl(20,15%,10%)",
+                  boxShadow: "0 0 16px hsla(44,100%,55%,0.3)",
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div
         className="animate-card-entrance"
@@ -215,7 +280,7 @@ const PlansPage = () => {
               <div className="px-5 pb-5 pt-2">
                 <button
                   type="button"
-                  onClick={() => !isCurrent && setPlanId(plan.id as PlanId)}
+                  onClick={() => !isCurrent && setConfirmPlan(plan.id as PlanId)}
                   className="w-full rounded-xl py-2.5 text-sm font-bold tracking-wide transition-all duration-200"
                   style={{
                     background: isCurrent
