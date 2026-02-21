@@ -457,11 +457,26 @@ const MessageBubble = ({
       {/* Bubble column */}
       <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
         {!isOwn && (
-          <UserProfilePopover name={msg.sender} role={msg.senderRole} avatar={msg.senderAvatar}>
-            <button className="text-xs font-semibold px-1 cursor-pointer hover:underline" style={{ color: msg.senderRole === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--muted-foreground))" }}>
-              {msg.senderRole === "admin" && "👑 "}{msg.sender}
-            </button>
-          </UserProfilePopover>
+          <div className="flex items-center gap-1.5 px-1">
+            <UserProfilePopover name={msg.sender} role={msg.senderRole} avatar={msg.senderAvatar}>
+              <button className="text-xs font-semibold cursor-pointer hover:underline" style={{ color: msg.senderRole === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--muted-foreground))" }}>
+                {msg.senderRole === "admin" && "👑 "}{msg.sender}
+              </button>
+            </UserProfilePopover>
+            {msg.senderRole === "admin" && (
+              <span
+                className="text-[9px] font-black uppercase tracking-wider rounded-full px-1.5 py-0.5 leading-none"
+                style={{
+                  background: "hsla(44,100%,50%,0.18)",
+                  border: "1px solid hsla(44,100%,58%,0.4)",
+                  color: "hsl(48,100%,70%)",
+                  boxShadow: "0 0 6px hsla(44,100%,55%,0.2)",
+                }}
+              >
+                Admin
+              </span>
+            )}
+          </div>
         )}
 
         {/* Hover zone */}
