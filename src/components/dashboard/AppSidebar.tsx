@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Home, CreditCard, ChevronLeft, ChevronRight, Crown, Zap, MessageCircle } from "lucide-react";
+import { Home, CreditCard, ChevronLeft, ChevronRight, Crown, Zap, MessageCircle, Gem } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import logoCharacter from "@/assets/logo-character.jpg";
 
 // Mock account snapshot — mirrors MOCK_USER in ProfilePage
 const ACCOUNT = { plan: "Pro", credits: 2_480, username: "@0xadam_checker" };
 
-type Section = "home" | "chat" | "checker" | "profile";
+type Section = "home" | "chat" | "checker" | "plans" | "profile";
 
 interface AppSidebarProps {
   active: Section;
@@ -19,6 +19,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: typeof Home }[] = [
   { id: "home",    label: "Home",    Icon: Home          },
   { id: "chat",    label: "Chat",    Icon: MessageCircle },
   { id: "checker", label: "Checker", Icon: CreditCard    },
+  { id: "plans",   label: "Plans",   Icon: Gem           },
   { id: "profile", label: "Profile", Icon: Crown         },
 ];
 
