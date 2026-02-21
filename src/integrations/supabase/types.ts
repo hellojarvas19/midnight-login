@@ -73,6 +73,48 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount_usd: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          crypto_currency: string
+          id: string
+          plan: string
+          status: string
+          tx_hash: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          amount_usd: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          crypto_currency: string
+          id?: string
+          plan: string
+          status?: string
+          tx_hash?: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          amount_usd?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          crypto_currency?: string
+          id?: string
+          plan?: string
+          status?: string
+          tx_hash?: string | null
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -82,6 +124,7 @@ export type Database = {
           id: string
           last_name: string | null
           plan: string
+          plan_expires_at: string | null
           referral_code: string
           referred_by: string | null
           telegram_id: string | null
@@ -95,6 +138,7 @@ export type Database = {
           id: string
           last_name?: string | null
           plan?: string
+          plan_expires_at?: string | null
           referral_code?: string
           referred_by?: string | null
           telegram_id?: string | null
@@ -108,6 +152,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           plan?: string
+          plan_expires_at?: string | null
           referral_code?: string
           referred_by?: string | null
           telegram_id?: string | null
