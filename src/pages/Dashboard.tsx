@@ -7,6 +7,7 @@ import ChatPage from "@/pages/dashboard/ChatPage";
 import CheckerPage from "@/pages/dashboard/CheckerPage";
 import ProfilePage from "@/pages/dashboard/ProfilePage";
 import PlansPage from "@/pages/dashboard/PlansPage";
+import { PlanProvider } from "@/contexts/PlanContext";
 
 type Section = "home" | "chat" | "checker" | "plans" | "profile";
 
@@ -168,6 +169,7 @@ const Dashboard = () => {
 
 
   return (
+    <PlanProvider>
     <div
       className="relative h-screen flex overflow-hidden"
       style={{ background: "hsl(var(--background))" }}
@@ -415,6 +417,7 @@ const Dashboard = () => {
         </footer>
       </div>
     </div>
+    </PlanProvider>
   );
 };
 
