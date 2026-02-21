@@ -1,20 +1,22 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle } from "lucide-react";
+import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle, Gem } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import HomePage from "@/pages/dashboard/HomePage";
 import ChatPage from "@/pages/dashboard/ChatPage";
 import CheckerPage from "@/pages/dashboard/CheckerPage";
 import ProfilePage from "@/pages/dashboard/ProfilePage";
+import PlansPage from "@/pages/dashboard/PlansPage";
 
-type Section = "home" | "chat" | "checker" | "profile";
+type Section = "home" | "chat" | "checker" | "plans" | "profile";
 
-const SECTION_ORDER: Section[] = ["home", "chat", "checker", "profile"];
+const SECTION_ORDER: Section[] = ["home", "chat", "checker", "plans", "profile"];
 
 const SECTION_TITLE: Record<Section, string> = {
   home:    "Home",
   chat:    "Chat",
   checker: "Checker",
+  plans:   "Plans",
   profile: "Profile",
 };
 
@@ -22,6 +24,7 @@ const SECTION_ICON: Record<Section, typeof Home> = {
   home:    Home,
   chat:    MessageCircle,
   checker: CreditCard,
+  plans:   Gem,
   profile: Crown,
 };
 
@@ -34,6 +37,7 @@ const PAGE_NODE: Record<Section, React.ReactNode> = {
   home:    <HomePage />,
   chat:    <ChatPage />,
   checker: <CheckerPage />,
+  plans:   <PlansPage />,
   profile: <ProfilePage />,
 };
 
@@ -359,6 +363,7 @@ const Dashboard = () => {
             {active === "home"    && <HomePage />}
             {active === "chat"    && <ChatPage />}
             {active === "checker" && <CheckerPage />}
+            {active === "plans"   && <PlansPage />}
             {active === "profile" && <ProfilePage />}
           </div>
         </main>
