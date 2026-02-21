@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.telegram-bot-webhook]
 verify_jwt = false
+
+[functions.owner-payments]
+verify_jwt = false

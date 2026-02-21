@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle, Diamond } from "lucide-react";
+import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle, Diamond, ShieldAlert } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import ParticleBackground from "@/components/ParticleBackground";
 import AppSidebar from "@/components/dashboard/AppSidebar";
@@ -8,12 +8,13 @@ import ChatPage from "@/pages/dashboard/ChatPage";
 import CheckerPage from "@/pages/dashboard/CheckerPage";
 import ProfilePage from "@/pages/dashboard/ProfilePage";
 import PlansPage from "@/pages/dashboard/PlansPage";
+import OwnerPanelPage from "@/pages/dashboard/OwnerPanelPage";
 import { PlanProvider } from "@/contexts/PlanContext";
 import { useAuth } from "@/contexts/AuthContext";
 
-type Section = "home" | "chat" | "checker" | "plans" | "profile";
+type Section = "home" | "chat" | "checker" | "plans" | "profile" | "owner";
 
-const SECTION_ORDER: Section[] = ["home", "chat", "checker", "plans", "profile"];
+const SECTION_ORDER: Section[] = ["home", "chat", "checker", "plans", "profile", "owner"];
 
 const SECTION_TITLE: Record<Section, string> = {
   home:    "Home",
@@ -21,6 +22,7 @@ const SECTION_TITLE: Record<Section, string> = {
   checker: "Checker",
   plans:   "Plans",
   profile: "Profile",
+  owner:   "Owner Panel",
 };
 
 const SECTION_ICON: Record<Section, typeof Home> = {
@@ -29,6 +31,7 @@ const SECTION_ICON: Record<Section, typeof Home> = {
   checker: CreditCard,
   plans:   Diamond,
   profile: Crown,
+  owner:   ShieldAlert,
 };
 
 const SWIPE_THRESHOLD = 60; // px leftward to trigger close
@@ -42,6 +45,7 @@ const PAGE_NODE: Record<Section, React.ReactNode> = {
   checker: <CheckerPage />,
   plans:   <PlansPage />,
   profile: <ProfilePage />,
+  owner:   <OwnerPanelPage />,
 };
 
 const Dashboard = () => {
@@ -374,6 +378,7 @@ const Dashboard = () => {
             {active === "checker" && <CheckerPage />}
             {active === "plans"   && <PlansPage />}
             {active === "profile" && <ProfilePage />}
+            {active === "owner"   && <OwnerPanelPage />}
           </div>
         </main>
 
