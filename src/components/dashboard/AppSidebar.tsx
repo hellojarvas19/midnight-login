@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Home, CreditCard, ChevronLeft, ChevronRight, Crown, Zap, MessageCircle, Diamond } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import logoCharacter from "@/assets/logo-character.jpg";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock account snapshot — mirrors MOCK_USER in ProfilePage
 const ACCOUNT = { plan: "Pro", credits: 2_480, username: "@0xadam_checker" };
@@ -25,6 +27,15 @@ const NAV_ITEMS: { id: Section; label: string; Icon: typeof Home }[] = [
 
 const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSidebarProps) => {
   const [avatarHovered, setAvatarHovered] = useState(false);
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+      setIsAdmin(!!data);
+    });
+  }, [user]);
 
   return (
     <aside
@@ -188,24 +199,39 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
               )}
             </div>
 
-            {/* Gold shimmer name */}
-            <p
-              className="text-xs font-bold tracking-widest uppercase"
-              style={{
-                whiteSpace: "nowrap",
-                opacity: 1,
-                transition: "opacity 0.2s ease",
-                background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
-                backgroundSize: "200% auto",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                animation: "gold-shimmer 2.8s linear infinite",
-                filter: "drop-shadow(0 0 6px hsla(44,100%,58%,0.5))",
-              }}
-            >
-              0xAdam
-            </p>
+            {/* Gold shimmer name + admin badge */}
+            <div className="flex items-center gap-1.5">
+              <p
+                className="text-xs font-bold tracking-widest uppercase"
+                style={{
+                  whiteSpace: "nowrap",
+                  background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
+                  backgroundSize: "200% auto",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  animation: "gold-shimmer 2.8s linear infinite",
+                  filter: "drop-shadow(0 0 6px hsla(44,100%,58%,0.5))",
+                }}
+              >
+                0xAdam
+              </p>
+              {isAdmin && (
+                <span
+                  className="text-[9px] font-black uppercase tracking-wider rounded-full px-1.5 py-0.5"
+                  style={{
+                    background: "hsla(44,100%,50%,0.18)",
+                    border: "1px solid hsla(44,100%,58%,0.4)",
+                    boxShadow: "0 0 8px hsla(44,100%,55%,0.25)",
+                    color: "hsl(48,100%,70%)",
+                    lineHeight: 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Admin
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
