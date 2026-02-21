@@ -1,150 +1,85 @@
 import { useState } from "react";
-import { Crown, Check, Zap, Star, Sparkles, AlertTriangle } from "lucide-react";
-import { usePlan, type PlanId } from "@/contexts/PlanContext";
+import { Crown, Check, Zap, Star, Sparkles, Clock, ShieldCheck } from "lucide-react";
+import { usePlan, PLAN_DETAILS, type PlanId } from "@/contexts/PlanContext";
+import PaymentPage from "./PaymentPage";
 
 const PLANS = [
   {
-    id: "free",
-    name: "Free",
-    price: "$0",
-    period: "/forever",
-    description: "Get started with basic features",
-    features: ["50 checks/day", "1 gateway", "Basic support", "Community chat"],
+    id: "basic" as PlanId,
+    icon: Zap,
     accent: "hsla(315,60%,45%,0.25)",
     border: "hsla(315,50%,45%,0.3)",
     glow: "hsla(315,80%,55%,0.15)",
-    icon: Zap,
-    current: false,
   },
   {
-    id: "pro",
-    name: "Pro",
-    price: "$29",
-    period: "/month",
-    description: "For power users who need more",
-    features: [
-      "Unlimited checks",
-      "All gateways",
-      "Priority support",
-      "Mass checker",
-      "Multi-proxy rotation",
-      "API access",
-    ],
+    id: "standard" as PlanId,
+    icon: Crown,
     accent: "hsla(44,90%,50%,0.25)",
     border: "hsla(44,80%,55%,0.4)",
     glow: "hsla(44,100%,55%,0.2)",
-    icon: Crown,
-    current: true,
     popular: true,
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    price: "$99",
-    period: "/month",
-    description: "Custom solutions for teams",
-    features: [
-      "Everything in Pro",
-      "Dedicated gateways",
-      "Custom integrations",
-      "SLA guarantee",
-      "Team seats (up to 10)",
-      "Webhook callbacks",
-    ],
+    id: "pro" as PlanId,
+    icon: Star,
     accent: "hsla(270,60%,50%,0.25)",
     border: "hsla(270,50%,55%,0.35)",
     glow: "hsla(270,70%,55%,0.15)",
-    icon: Star,
-    current: false,
   },
 ];
 
 const PlansPage = () => {
-  const { activePlan, setPlanId } = usePlan();
-  const [confirmPlan, setConfirmPlan] = useState<PlanId | null>(null);
-  const confirmName = PLANS.find((p) => p.id === confirmPlan)?.name ?? "";
+  const { activePlan, isPlanActive, planExpiresAt } = usePlan();
+  const [payingPlan, setPayingPlan] = useState<PlanId | null>(null);
+
+  if (payingPlan) {
+    return (
+      <PaymentPage
+        selectedPlan={payingPlan}
+        onBack={() => setPayingPlan(null)}
+        onSuccess={() => setPayingPlan(null)}
+      />
+    );
+  }
+
+  const expiresFormatted = planExpiresAt
+    ? new Date(planExpiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : null;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Confirmation Modal */}
-      {confirmPlan && (
+      {/* Active plan banner */}
+      {isPlanActive && activePlan && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "hsla(330,20%,4%,0.7)", backdropFilter: "blur(8px)" }}
-          onClick={() => setConfirmPlan(null)}
+          className="glass-card rounded-2xl p-4 flex items-center gap-3 animate-card-entrance"
+          style={{
+            border: "1px solid hsla(142,60%,40%,0.3)",
+            background: "hsla(142,50%,15%,0.15)",
+          }}
         >
-          <div
-            className="glass-card rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col items-center gap-4"
-            style={{
-              border: "1px solid hsla(44,80%,55%,0.3)",
-              boxShadow: "0 0 40px hsla(44,100%,55%,0.15), 0 0 80px hsla(315,80%,50%,0.1)",
-              animation: "card-entrance 0.25s cubic-bezier(0.34,1.56,0.64,1) both",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="rounded-full p-3"
-              style={{ background: "hsla(44,80%,40%,0.15)", border: "1px solid hsla(44,70%,50%,0.2)" }}
-            >
-              <AlertTriangle size={24} style={{ color: "hsl(48,100%,65%)", filter: "drop-shadow(0 0 6px hsla(44,100%,58%,0.6))" }} />
-            </div>
-            <h3
-              className="text-lg font-bold text-center"
-              style={{ color: "hsl(var(--foreground))" }}
-            >
-              Switch to {confirmName}?
-            </h3>
-            <p className="text-xs text-center" style={{ color: "hsl(var(--muted-foreground))" }}>
-              Your current plan will be replaced with the <strong style={{ color: "hsl(48,100%,68%)" }}>{confirmName}</strong> plan.
+          <ShieldCheck size={18} style={{ color: "hsl(142,70%,55%)", filter: "drop-shadow(0 0 6px hsla(142,70%,55%,0.6))" }} />
+          <div className="flex-1">
+            <p className="text-sm font-bold" style={{ color: "hsl(142,70%,65%)" }}>
+              {activePlan.name} Plan Active
             </p>
-            <div className="flex gap-3 w-full mt-1">
-              <button
-                type="button"
-                onClick={() => setConfirmPlan(null)}
-                className="flex-1 rounded-xl py-2.5 text-sm font-bold transition-all duration-200"
-                style={{
-                  background: "hsla(315,30%,20%,0.4)",
-                  border: "1px solid hsla(315,40%,40%,0.25)",
-                  color: "hsl(var(--muted-foreground))",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => { setPlanId(confirmPlan); setConfirmPlan(null); }}
-                className="flex-1 rounded-xl py-2.5 text-sm font-bold transition-all duration-200"
-                style={{
-                  background: "linear-gradient(135deg, hsl(42,100%,48%), hsl(48,100%,58%))",
-                  border: "1px solid hsla(44,80%,55%,0.5)",
-                  color: "hsl(20,15%,10%)",
-                  boxShadow: "0 0 16px hsla(44,100%,55%,0.3)",
-                }}
-              >
-                Confirm
-              </button>
-            </div>
+            <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+              Expires {expiresFormatted}
+            </p>
           </div>
+          <Clock size={14} style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       )}
+
       {/* Header */}
-      <div
-        className="animate-card-entrance"
-        style={{ animationDelay: "0ms", animationFillMode: "both" }}
-      >
-        <p className="text-sm font-medium mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-          Choose your
-        </p>
+      <div className="animate-card-entrance" style={{ animationDelay: "0ms", animationFillMode: "both" }}>
+        <p className="text-sm font-medium mb-1" style={{ color: "hsl(var(--muted-foreground))" }}>Choose your</p>
         <h1
           className="text-4xl font-black tracking-tight leading-none"
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            background:
-              "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
+            background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
             backgroundSize: "200% auto",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
             animation: "gold-shimmer 2.8s linear infinite",
             filter: "drop-shadow(0 0 12px hsla(44,100%,58%,0.4))",
           }}
@@ -152,15 +87,16 @@ const PlansPage = () => {
           Plan
         </h1>
         <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-          Unlock more power with a premium plan.
+          Pay with crypto. Activate instantly after confirmation.
         </p>
       </div>
 
       {/* Plans grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {PLANS.map((plan, idx) => {
-          const PlanIcon = plan.icon;
-          const isCurrent = plan.id === activePlan.id;
+        {PLANS.map((planStyle, idx) => {
+          const plan = PLAN_DETAILS[planStyle.id];
+          const PlanIcon = planStyle.icon;
+          const isCurrent = isPlanActive && activePlan?.id === planStyle.id;
           return (
             <div
               key={plan.id}
@@ -168,14 +104,13 @@ const PlansPage = () => {
               style={{
                 animationDelay: `${80 + idx * 80}ms`,
                 animationFillMode: "both",
-                border: `1px solid ${plan.border}`,
-                boxShadow: plan.popular
-                  ? `0 0 30px ${plan.glow}, 0 0 60px ${plan.glow}`
-                  : `0 0 20px ${plan.glow}`,
+                border: `1px solid ${planStyle.border}`,
+                boxShadow: planStyle.popular
+                  ? `0 0 30px ${planStyle.glow}, 0 0 60px ${planStyle.glow}`
+                  : `0 0 20px ${planStyle.glow}`,
               }}
             >
-              {/* Popular badge */}
-              {plan.popular && (
+              {planStyle.popular && (
                 <div
                   className="absolute top-3 right-3 flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
                   style={{
@@ -184,23 +119,18 @@ const PlansPage = () => {
                     color: "hsl(48,100%,70%)",
                   }}
                 >
-                  <Sparkles size={10} />
-                  Popular
+                  <Sparkles size={10} /> Popular
                 </div>
               )}
 
-              {/* Header */}
               <div className="px-5 pt-5 pb-4">
                 <div className="flex items-center gap-2.5 mb-3">
-                  <div
-                    className="rounded-xl p-2"
-                    style={{ background: plan.accent }}
-                  >
+                  <div className="rounded-xl p-2" style={{ background: planStyle.accent }}>
                     <PlanIcon
                       size={16}
                       style={{
-                        color: plan.popular ? "hsl(48,100%,65%)" : "hsl(var(--primary))",
-                        filter: plan.popular
+                        color: planStyle.popular ? "hsl(48,100%,65%)" : "hsl(var(--primary))",
+                        filter: planStyle.popular
                           ? "drop-shadow(0 0 6px hsla(44,100%,58%,0.8))"
                           : "drop-shadow(0 0 4px hsla(315,90%,60%,0.55))",
                       }}
@@ -208,51 +138,35 @@ const PlansPage = () => {
                   </div>
                   <h2
                     className="text-lg font-bold tracking-tight"
-                    style={{
-                      color: plan.popular ? "hsl(48,100%,68%)" : "hsl(var(--foreground))",
-                    }}
+                    style={{ color: planStyle.popular ? "hsl(48,100%,68%)" : "hsl(var(--foreground))" }}
                   >
                     {plan.name}
                   </h2>
                 </div>
 
                 <p className="text-xs mb-4" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  {plan.description}
+                  {plan.duration} days access
                 </p>
 
-                {/* Price */}
                 <div className="flex items-baseline gap-1">
                   <span
                     className="text-3xl font-black tracking-tight"
                     style={{
                       fontFamily: "'Space Grotesk', sans-serif",
-                      color: plan.popular ? "hsl(48,100%,70%)" : "hsl(var(--foreground))",
-                      textShadow: plan.popular
-                        ? "0 0 20px hsla(44,100%,58%,0.35)"
-                        : "0 0 20px hsla(315,90%,72%,0.15)",
+                      color: planStyle.popular ? "hsl(48,100%,70%)" : "hsl(var(--foreground))",
+                      textShadow: planStyle.popular ? "0 0 20px hsla(44,100%,58%,0.35)" : "0 0 20px hsla(315,90%,72%,0.15)",
                     }}
                   >
                     {plan.price}
                   </span>
-                  <span
-                    className="text-xs font-medium"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                  >
-                    {plan.period}
+                  <span className="text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    /{plan.duration}d
                   </span>
                 </div>
               </div>
 
-              {/* Divider */}
-              <div
-                style={{
-                  height: 1,
-                  margin: "0 20px",
-                  background: plan.border,
-                }}
-              />
+              <div style={{ height: 1, margin: "0 20px", background: planStyle.border }} />
 
-              {/* Features */}
               <div className="flex-1 px-5 py-4 flex flex-col gap-2.5">
                 {plan.features.map((feature) => (
                   <div key={feature} className="flex items-center gap-2.5">
@@ -260,53 +174,49 @@ const PlansPage = () => {
                       size={13}
                       style={{
                         flexShrink: 0,
-                        color: plan.popular ? "hsl(48,100%,65%)" : "hsl(var(--primary))",
-                        filter: plan.popular
+                        color: planStyle.popular ? "hsl(48,100%,65%)" : "hsl(var(--primary))",
+                        filter: planStyle.popular
                           ? "drop-shadow(0 0 4px hsla(44,100%,58%,0.6))"
                           : "drop-shadow(0 0 3px hsla(315,90%,60%,0.4))",
                       }}
                     />
-                    <span
-                      className="text-xs font-medium"
-                      style={{ color: "hsl(var(--foreground))", opacity: 0.85 }}
-                    >
+                    <span className="text-xs font-medium" style={{ color: "hsl(var(--foreground))", opacity: 0.85 }}>
                       {feature}
                     </span>
                   </div>
                 ))}
               </div>
 
-              {/* CTA */}
               <div className="px-5 pb-5 pt-2">
                 <button
                   type="button"
-                  onClick={() => !isCurrent && setConfirmPlan(plan.id as PlanId)}
+                  onClick={() => !isCurrent && setPayingPlan(planStyle.id)}
                   className="w-full rounded-xl py-2.5 text-sm font-bold tracking-wide transition-all duration-200"
                   style={{
                     background: isCurrent
                       ? "transparent"
-                      : plan.popular
+                      : planStyle.popular
                         ? "linear-gradient(135deg, hsl(42,100%,48%), hsl(48,100%,58%))"
                         : "hsla(315,70%,45%,0.25)",
                     border: isCurrent
-                      ? `1px solid ${plan.border}`
-                      : plan.popular
+                      ? `1px solid ${planStyle.border}`
+                      : planStyle.popular
                         ? "1px solid hsla(44,80%,55%,0.5)"
-                        : `1px solid ${plan.border}`,
+                        : `1px solid ${planStyle.border}`,
                     color: isCurrent
                       ? "hsl(var(--muted-foreground))"
-                      : plan.popular
+                      : planStyle.popular
                         ? "hsl(20,15%,10%)"
                         : "hsl(var(--foreground))",
                     boxShadow: isCurrent
                       ? "none"
-                      : plan.popular
+                      : planStyle.popular
                         ? "0 0 20px hsla(44,100%,55%,0.3)"
-                        : `0 0 12px ${plan.glow}`,
+                        : `0 0 12px ${planStyle.glow}`,
                     cursor: isCurrent ? "default" : "pointer",
                   }}
                 >
-                  {isCurrent ? "Current Plan" : "Upgrade"}
+                  {isCurrent ? "Current Plan" : "Upgrade Now"}
                 </button>
               </div>
             </div>

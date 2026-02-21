@@ -11,6 +11,7 @@ interface Profile {
   avatar_url: string | null;
   credits: number;
   plan: string;
+  plan_expires_at: string | null;
   referral_code: string;
   referred_by: string | null;
   created_at: string;

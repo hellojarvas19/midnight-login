@@ -176,7 +176,7 @@ const CrownSparkles = () => {
 };
 
 const ProfilePage = () => {
-  const { activePlan } = usePlan();
+  const { activePlan, isPlanActive } = usePlan();
   const { profile, signOut, user: authUser } = useAuth();
   const navigate = useNavigate();
   const [copiedId, setCopiedId]           = useState(false);
@@ -205,7 +205,7 @@ const ProfilePage = () => {
     avatarUrl: profile?.avatar_url || FALLBACK.avatarUrl,
     joinedDate: profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : FALLBACK.joinedDate,
     credits: profile?.credits ?? FALLBACK.credits,
-    plan: "Pro",
+    plan: activePlan?.name ?? "None",
     referralCode: profile?.referral_code || FALLBACK.referralCode,
     referralCount: 0,
     referralLink: profile?.referral_code ? `https://t.me/ChkXdAdmBot?start=${profile.referral_code}` : FALLBACK.referralLink,
@@ -465,7 +465,7 @@ const ProfilePage = () => {
           >
             <Zap size={12} style={{ color: "hsl(var(--primary))" }} />
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--primary))" }}>
-              {activePlan.name} Plan
+              {activePlan?.name ?? "No"} Plan
             </span>
           </div>
         </div>
@@ -498,9 +498,9 @@ const ProfilePage = () => {
           </div>
           <div className="grid grid-cols-3 divide-x" style={{ borderColor: "hsla(44,60%,40%,0.12)" }}>
             {[
-              { icon: CreditCard, label: "Check Limit", value: activePlan.checkLimit, color: "hsl(var(--primary))", bg: "hsla(315,80%,40%,0.15)" },
-              { icon: Zap, label: "Daily Credits", value: activePlan.dailyCredits, color: "hsl(48,100%,65%)", bg: "hsla(44,80%,40%,0.15)" },
-              { icon: Clock, label: "Access", value: activePlan.access, color: "hsl(142,70%,55%)", bg: "hsla(142,60%,30%,0.15)" },
+              { icon: CreditCard, label: "Price", value: activePlan?.price ?? "—", color: "hsl(var(--primary))", bg: "hsla(315,80%,40%,0.15)" },
+              { icon: Zap, label: "Duration", value: activePlan ? `${activePlan.duration}d` : "—", color: "hsl(48,100%,65%)", bg: "hsla(44,80%,40%,0.15)" },
+              { icon: Clock, label: "Status", value: isPlanActive ? "Active" : "Inactive", color: isPlanActive ? "hsl(142,70%,55%)" : "hsl(0,75%,60%)", bg: isPlanActive ? "hsla(142,60%,30%,0.15)" : "hsla(0,60%,30%,0.15)" },
             ].map((item) => {
               const ItemIcon = item.icon;
               return (
