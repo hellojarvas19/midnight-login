@@ -327,7 +327,7 @@ const Dashboard = () => {
         {/* Page content — directional slide transition + swipe navigation */}
         <main
           ref={mainRef}
-          className="relative flex-1 px-4 py-5 md:p-6 overflow-y-auto overflow-x-hidden"
+          className={`relative flex-1 overflow-y-auto overflow-x-hidden ${active === "chat" ? "px-0 py-0" : "px-4 py-5 md:p-6"}`}
           onTouchStart={handleContentTouchStart}
           onTouchEnd={handleContentTouchEnd}
         >
