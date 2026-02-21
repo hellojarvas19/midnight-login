@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 /* ─── Types ─── */
 type MessageType = "text" | "image" | "audio";
@@ -30,6 +32,8 @@ interface ChatMessage {
   content: string;
   sender: string;
   senderRole: SenderRole;
+  senderId: string;
+  senderAvatar?: string;
   timestamp: Date;
   pinned?: boolean;
   deleted?: boolean;
@@ -40,73 +44,15 @@ interface ChatMessage {
   quotedMessage?: QuotedMessage;
 }
 
-/* ─── Member data ─── */
-const MEMBERS = [
-  { name: "0xAdam", role: "admin" as SenderRole, online: true, joined: "Jan 2024" },
-  { name: "CryptoZero", role: "user" as SenderRole, online: true, joined: "Mar 2024" },
-  { name: "NightCoder", role: "user" as SenderRole, online: true, joined: "Apr 2024" },
-  { name: "w3b_ghost", role: "user" as SenderRole, online: false, joined: "May 2024" },
-  { name: "ShadowMint", role: "user" as SenderRole, online: true, joined: "Jun 2024" },
-  { name: "PhantomDev", role: "user" as SenderRole, online: false, joined: "Jul 2024" },
-  { name: "ByteRunner", role: "user" as SenderRole, online: true, joined: "Aug 2024" },
-];
-
-/* ─── Seed messages ─── */
-const SEED: ChatMessage[] = [
-  {
-    id: "m1", type: "text",
-    content: "Welcome to the 0xAdam Checker community chat! 👾",
-    sender: "0xAdam", senderRole: "admin",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    pinned: true, reactions: { "🔥": 5, "👍": 3 },
-  },
-  {
-    id: "m2", type: "text",
-    content: "Hey! Just got my Pro plan, the checker is insane 🔥",
-    sender: "CryptoZero", senderRole: "user",
-    timestamp: new Date(Date.now() - 1000 * 60 * 18),
-    reactions: { "❤️": 2 },
-  },
-  {
-    id: "m3", type: "text",
-    content: "Glad to have you onboard. Use /help in the bot to get started.",
-    sender: "0xAdam", senderRole: "admin",
-    timestamp: new Date(Date.now() - 1000 * 60 * 15),
-    reactions: {},
-    quotedMessage: {
-      id: "m2", sender: "CryptoZero", senderRole: "user",
-      content: "Hey! Just got my Pro plan, the checker is insane 🔥",
-      type: "text",
-    },
-  },
-  {
-    id: "m4", type: "text",
-    content: "What gateways are best for EU bins?",
-    sender: "NightCoder", senderRole: "user",
-    timestamp: new Date(Date.now() - 1000 * 60 * 8),
-    reactions: { "😂": 1 },
-  },
-  {
-    id: "m5", type: "text",
-    content: "Try Stripe or Braintree for EU — they have lower decline rates on non-3DS bins. Check https://stripe.com/docs for more info.",
-    sender: "0xAdam", senderRole: "admin",
-    timestamp: new Date(Date.now() - 1000 * 60 * 6),
-    reactions: { "👍": 4, "🔥": 2 },
-    quotedMessage: {
-      id: "m4", sender: "NightCoder", senderRole: "user",
-      content: "What gateways are best for EU bins?",
-      type: "text",
-    },
-  },
-];
-
 /* ─── Helpers ─── */
 function timeAgo(date: Date) {
   const s = Math.floor((Date.now() - date.getTime()) / 1000);
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m`;
-  return `${Math.floor(m / 60)}h`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
 }
 
 function quotePreview(msg: ChatMessage): string {
@@ -124,12 +70,6 @@ function extractUrls(text: string): string[] {
 function getDomain(url: string): string {
   try { return new URL(url).hostname; } catch { return url; }
 }
-
-let _mid = 100;
-const uid = () => `m${_mid++}`;
-
-const IS_ADMIN = true;
-const MY_NAME  = "0xAdam";
 
 /* ─── Link Preview Card ─── */
 const LinkPreviewCard = ({ url }: { url: string }) => {
@@ -166,7 +106,7 @@ const LinkPreviewCard = ({ url }: { url: string }) => {
 };
 
 /* ─── Member Panel ─── */
-const MemberPanel = ({ onClose }: { onClose: () => void }) => (
+const MemberPanel = ({ members, onClose }: { members: { name: string; role: SenderRole; online: boolean; avatar?: string }[]; onClose: () => void }) => (
   <div
     className="fixed inset-0 z-[55] flex justify-end"
     onClick={onClose}
@@ -189,14 +129,14 @@ const MemberPanel = ({ onClose }: { onClose: () => void }) => (
       <div className="px-4 py-3 border-b" style={{ borderColor: "hsla(315,30%,25%,0.15)" }}>
         <p className="text-xs font-semibold" style={{ color: "hsl(var(--foreground))" }}>0xAdam Community</p>
         <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>Official community chat for 0xAdam Checker users. Ask questions, share tips, and connect.</p>
-        <p className="text-xs mt-2 font-medium" style={{ color: "hsl(315,90%,65%)" }}>{MEMBERS.length} members · {MEMBERS.filter((m) => m.online).length} online</p>
+        <p className="text-xs mt-2 font-medium" style={{ color: "hsl(315,90%,65%)" }}>{members.length} members</p>
       </div>
       <div className="flex-1 px-2 py-2">
-        {MEMBERS.map((m) => (
+        {members.map((m) => (
           <div key={m.name} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-white/5 transition-colors">
             <div className="relative">
               <div
-                className="rounded-full flex items-center justify-center text-xs font-bold"
+                className="rounded-full flex items-center justify-center text-xs font-bold overflow-hidden"
                 style={{
                   width: 32, height: 32,
                   background: m.role === "admin" ? "linear-gradient(135deg, hsl(42,100%,52%), hsl(36,90%,40%))" : "hsla(315,80%,40%,0.25)",
@@ -204,21 +144,15 @@ const MemberPanel = ({ onClose }: { onClose: () => void }) => (
                   color: m.role === "admin" ? "hsl(330,15%,5%)" : "hsl(var(--foreground))",
                 }}
               >
-                {m.role === "admin" ? <Crown size={12} /> : m.name[0].toUpperCase()}
+                {m.avatar ? (
+                  <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
+                ) : m.role === "admin" ? <Crown size={12} /> : m.name[0].toUpperCase()}
               </div>
-              <span
-                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
-                style={{
-                  background: m.online ? "hsl(142,70%,55%)" : "hsl(var(--muted-foreground))",
-                  borderColor: "hsla(330,20%,5%,0.98)",
-                }}
-              />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate" style={{ color: m.role === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--foreground))" }}>
                 {m.role === "admin" && "👑 "}{m.name}
               </p>
-              <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.6 }}>{m.online ? "online" : "last seen recently"}</p>
             </div>
             {m.role === "admin" && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "hsla(44,100%,55%,0.15)", color: "hsl(44,100%,65%)", border: "1px solid hsla(44,100%,55%,0.25)" }}>Admin</span>
@@ -255,18 +189,8 @@ const ScrollToBottomButton = ({ unreadCount, onClick }: { unreadCount: number; o
   </button>
 );
 
-/* ─── Unread Separator ─── */
-const UnreadSeparator = () => (
-  <div className="flex items-center gap-3 py-1">
-    <div className="flex-1 h-px" style={{ background: "hsla(200,80%,55%,0.4)" }} />
-    <span className="text-xs font-semibold px-2" style={{ color: "hsl(200,90%,65%)" }}>Unread Messages</span>
-    <div className="flex-1 h-px" style={{ background: "hsla(200,80%,55%,0.4)" }} />
-  </div>
-);
-
 /* ─── User Profile Popover ─── */
-const UserProfilePopover = ({ name, role, children }: { name: string; role: SenderRole; children: React.ReactNode }) => {
-  const member = MEMBERS.find((m) => m.name === name);
+const UserProfilePopover = ({ name, role, avatar, children }: { name: string; role: SenderRole; avatar?: string; children: React.ReactNode }) => {
   return (
     <Popover>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
@@ -281,7 +205,7 @@ const UserProfilePopover = ({ name, role, children }: { name: string; role: Send
       >
         <div className="p-4 flex flex-col items-center gap-2">
           <div
-            className="rounded-full flex items-center justify-center text-sm font-bold"
+            className="rounded-full flex items-center justify-center text-sm font-bold overflow-hidden"
             style={{
               width: 48, height: 48,
               background: role === "admin" ? "linear-gradient(135deg, hsl(42,100%,52%), hsl(36,90%,40%))" : "hsla(315,80%,40%,0.25)",
@@ -289,7 +213,9 @@ const UserProfilePopover = ({ name, role, children }: { name: string; role: Send
               color: role === "admin" ? "hsl(330,15%,5%)" : "hsl(var(--foreground))",
             }}
           >
-            {role === "admin" ? <Crown size={18} /> : name[0].toUpperCase()}
+            {avatar ? (
+              <img src={avatar} alt={name} className="w-full h-full object-cover" />
+            ) : role === "admin" ? <Crown size={18} /> : name[0].toUpperCase()}
           </div>
           <p className="text-sm font-bold" style={{ color: role === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--foreground))" }}>
             {role === "admin" && "👑 "}{name}
@@ -297,16 +223,6 @@ const UserProfilePopover = ({ name, role, children }: { name: string; role: Send
           {role === "admin" && (
             <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "hsla(44,100%,55%,0.15)", color: "hsl(44,100%,65%)", border: "1px solid hsla(44,100%,55%,0.25)" }}>Admin</span>
           )}
-          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-            Joined {member?.joined || "2024"} · {member?.online ? "🟢 Online" : "⚫ Offline"}
-          </p>
-          <button
-            onClick={() => toast.info(`DM to ${name} (simulated)`)}
-            className="w-full mt-1 rounded-xl py-2 text-xs font-semibold transition-all active:scale-95"
-            style={{ background: "hsla(315,80%,40%,0.2)", border: "1px solid hsla(315,50%,40%,0.3)", color: "hsl(315,90%,65%)" }}
-          >
-            Send Message
-          </button>
         </div>
       </PopoverContent>
     </Popover>
@@ -520,9 +436,9 @@ const MessageBubble = ({
     <div ref={pinnedRef} className={`flex gap-2.5 ${isOwn ? "flex-row-reverse" : "flex-row"} items-end group`}>
       {/* Avatar with profile popover */}
       {!isOwn && (
-        <UserProfilePopover name={msg.sender} role={msg.senderRole}>
+        <UserProfilePopover name={msg.sender} role={msg.senderRole} avatar={msg.senderAvatar}>
           <button
-            className="rounded-full flex items-center justify-center shrink-0 text-xs font-bold cursor-pointer transition-transform hover:scale-105"
+            className="rounded-full flex items-center justify-center shrink-0 text-xs font-bold cursor-pointer transition-transform hover:scale-105 overflow-hidden"
             style={{
               width: 30, height: 30,
               background: msg.senderRole === "admin" ? "linear-gradient(135deg, hsl(42,100%,52%), hsl(36,90%,40%))" : "hsla(315,80%,40%,0.25)",
@@ -531,7 +447,9 @@ const MessageBubble = ({
               boxShadow: msg.senderRole === "admin" ? "0 0 10px hsla(44,100%,55%,0.4)" : "none",
             }}
           >
-            {msg.senderRole === "admin" ? <Crown size={12} /> : msg.sender[0].toUpperCase()}
+            {msg.senderAvatar ? (
+              <img src={msg.senderAvatar} alt={msg.sender} className="w-full h-full object-cover" />
+            ) : msg.senderRole === "admin" ? <Crown size={12} /> : msg.sender[0].toUpperCase()}
           </button>
         </UserProfilePopover>
       )}
@@ -539,7 +457,7 @@ const MessageBubble = ({
       {/* Bubble column */}
       <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
         {!isOwn && (
-          <UserProfilePopover name={msg.sender} role={msg.senderRole}>
+          <UserProfilePopover name={msg.sender} role={msg.senderRole} avatar={msg.senderAvatar}>
             <button className="text-xs font-semibold px-1 cursor-pointer hover:underline" style={{ color: msg.senderRole === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--muted-foreground))" }}>
               {msg.senderRole === "admin" && "👑 "}{msg.sender}
             </button>
@@ -609,7 +527,6 @@ const MessageBubble = ({
               <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors" style={{ color: "hsl(200,90%,65%)" }} onClick={() => { onReply(msg); setMenuOpen(false); }}>
                 <Reply size={12} /> Reply
               </button>
-              {/* Copy */}
               {msg.type === "text" && !msg.deleted && (
                 <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors" style={{ color: "hsl(170,70%,60%)" }} onClick={handleCopy}>
                   <Copy size={12} /> Copy
@@ -626,14 +543,16 @@ const MessageBubble = ({
                   </button>
                 )
               )}
-              {msg.type === "text" && !msg.deleted && (
+              {isOwn && msg.type === "text" && !msg.deleted && (
                 <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors" style={{ color: "hsl(44,100%,65%)" }} onClick={openEdit}>
                   <Pencil size={12} /> Edit
                 </button>
               )}
-              <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors" style={{ color: "hsl(0,75%,62%)" }} onClick={() => { onDelete(msg.id); setMenuOpen(false); }}>
-                <Trash2 size={12} /> Delete
-              </button>
+              {(isOwn || isAdmin) && (
+                <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors" style={{ color: "hsl(0,75%,62%)" }} onClick={() => { onDelete(msg.id); setMenuOpen(false); }}>
+                  <Trash2 size={12} /> Delete
+                </button>
+              )}
               <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-white/5 transition-colors" style={{ color: "hsl(var(--muted-foreground))" }} onClick={() => setMenuOpen(false)}>
                 <X size={12} /> Close
               </button>
@@ -649,31 +568,6 @@ const MessageBubble = ({
           {isOwn && <CheckCheck size={11} style={{ color: "hsl(var(--primary))", opacity: 0.7 }} />}
         </div>
       </div>
-    </div>
-  );
-};
-
-/* ─── Typing indicator ─── */
-const TYPERS = ["CryptoZero", "NightCoder", "w3b_ghost"];
-
-const TypingIndicator = ({ names }: { names: string[] }) => {
-  if (names.length === 0) return null;
-  const label = names.length === 1 ? `${names[0]} is typing` : names.length === 2 ? `${names[0]} and ${names[1]} are typing` : `${names[0]} and ${names.length - 1} others are typing`;
-  return (
-    <div className="flex items-center gap-2.5 px-1" style={{ animation: "typing-fade-in 0.25s cubic-bezier(0.34,1.56,0.64,1) both" }}>
-      <div className="flex -space-x-1.5">
-        {names.slice(0, 2).map((name) => (
-          <div key={name} className="rounded-full flex items-center justify-center text-[9px] font-bold" style={{ width: 20, height: 20, background: "hsla(315,80%,40%,0.25)", border: "1.5px solid hsla(315,50%,40%,0.4)", color: "hsl(var(--foreground))" }}>
-            {name[0].toUpperCase()}
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-1.5 rounded-2xl px-3 py-2" style={{ background: "hsla(330,18%,8%,0.75)", border: "1px solid hsla(315,30%,25%,0.22)", backdropFilter: "blur(16px)" }}>
-        {[0, 1, 2].map((i) => (
-          <span key={i} style={{ display: "block", width: 6, height: 6, borderRadius: "50%", background: "hsl(315,90%,65%)", animation: `typing-bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-        ))}
-      </div>
-      <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.65 }}>{label}</span>
     </div>
   );
 };
@@ -711,25 +605,52 @@ const SearchBar = ({ value, onChange, onClose, onPrev, onNext, matchIndex, match
   </div>
 );
 
+/* ─── DB row → ChatMessage mapper ─── */
+function dbRowToMessage(row: any, quotedRow?: any): ChatMessage {
+  return {
+    id: row.id,
+    type: (row.type || "text") as MessageType,
+    content: row.content || "",
+    sender: row.sender_name,
+    senderRole: (row.sender_role || "user") as SenderRole,
+    senderId: row.user_id,
+    senderAvatar: row.sender_avatar_url || undefined,
+    timestamp: new Date(row.created_at),
+    pinned: row.pinned || false,
+    deleted: row.deleted || false,
+    edited: row.edited || false,
+    imagePreview: row.image_url || undefined,
+    reactions: {},
+    quotedMessage: quotedRow ? {
+      id: quotedRow.id,
+      sender: quotedRow.sender_name,
+      senderRole: (quotedRow.sender_role || "user") as SenderRole,
+      content: quotedRow.content || "",
+      type: (quotedRow.type || "text") as MessageType,
+      deleted: quotedRow.deleted || false,
+    } : undefined,
+  };
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 const ChatPage = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>(SEED);
+  const { user, profile } = useAuth();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingMs, setRecordingMs] = useState(0);
   const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
-  const [typingNames, setTypingNames] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMatchIdx, setSearchMatchIdx] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  /* ── New Telegram states ── */
   const [isMuted, setIsMuted] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [lastReadIndex] = useState(3); // simulate: first 4 messages are "read"
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -738,11 +659,146 @@ const ChatPage = () => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const msgRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const typingDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const pinnedMessage = messages.find((m) => m.pinned) ?? null;
+  const myName = profile?.first_name
+    ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ""}`
+    : profile?.username || "User";
+  const myId = user?.id || "";
 
-  /* ── Scroll listener for scroll-to-bottom button ── */
+  const pinnedMessage = messages.find((m) => m.pinned && !m.deleted) ?? null;
+
+  // Derive unique members from messages
+  const chatMembers = useMemo(() => {
+    const seen = new Map<string, { name: string; role: SenderRole; online: boolean; avatar?: string }>();
+    messages.forEach((m) => {
+      if (!seen.has(m.senderId)) {
+        seen.set(m.senderId, { name: m.sender, role: m.senderRole, online: true, avatar: m.senderAvatar });
+      }
+    });
+    return Array.from(seen.values());
+  }, [messages]);
+
+  /* ── Check admin role ── */
+  useEffect(() => {
+    if (!user) return;
+    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+      setIsAdmin(!!data);
+    });
+  }, [user]);
+
+  /* ── Load messages from DB ── */
+  useEffect(() => {
+    const loadMessages = async () => {
+      setLoading(true);
+      // Load messages with a manual join for quoted messages
+      const { data: rows, error } = await supabase
+        .from("messages")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(200);
+
+      if (error) {
+        console.error("Failed to load messages:", error);
+        setLoading(false);
+        return;
+      }
+
+      if (!rows || rows.length === 0) {
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+
+      // Build a map for quoted messages
+      const rowMap = new Map<string, any>();
+      rows.forEach((r: any) => rowMap.set(r.id, r));
+
+      const mapped = rows.map((r: any) => {
+        const quotedRow = r.quoted_message_id ? rowMap.get(r.quoted_message_id) : undefined;
+        return dbRowToMessage(r, quotedRow);
+      });
+
+      setMessages(mapped);
+      setLoading(false);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "auto" }), 100);
+    };
+
+    loadMessages();
+  }, []);
+
+  /* ── Realtime subscription ── */
+  useEffect(() => {
+    const channel = supabase
+      .channel("messages-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as any;
+          // Don't add if we already have it (optimistic)
+          setMessages((prev) => {
+            if (prev.find((m) => m.id === row.id)) return prev;
+            const msg = dbRowToMessage(row);
+            // Try to resolve quoted message from existing messages
+            if (row.quoted_message_id) {
+              const quoted = prev.find((m) => m.id === row.quoted_message_id);
+              if (quoted) {
+                msg.quotedMessage = {
+                  id: quoted.id,
+                  sender: quoted.sender,
+                  senderRole: quoted.senderRole,
+                  content: quoted.content,
+                  type: quoted.type,
+                  deleted: quoted.deleted,
+                };
+              }
+            }
+            return [...prev, msg];
+          });
+          // Increment unread if scrolled up
+          if (showScrollBtn && row.user_id !== myId) {
+            setUnreadCount((c) => c + 1);
+          }
+          setTimeout(() => {
+            if (!showScrollBtn) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+          }, 50);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as any;
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id === row.id) {
+                return { ...m, content: row.content, deleted: row.deleted, edited: row.edited, pinned: row.pinned };
+              }
+              // Update quoted references
+              if (m.quotedMessage?.id === row.id) {
+                return { ...m, quotedMessage: { ...m.quotedMessage, content: row.content, deleted: row.deleted } };
+              }
+              return m;
+            })
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "messages" },
+        (payload) => {
+          const oldRow = payload.old as any;
+          setMessages((prev) => prev.filter((m) => m.id !== oldRow.id));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [myId, showScrollBtn]);
+
+  /* ── Scroll listener ── */
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -764,7 +820,7 @@ const ChatPage = () => {
   const matchIds = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [] as string[];
-    return messages.filter((m) => m.type === "text" && m.content.toLowerCase().includes(q)).map((m) => m.id);
+    return messages.filter((m) => m.type === "text" && !m.deleted && m.content.toLowerCase().includes(q)).map((m) => m.id);
   }, [messages, searchQuery]);
 
   useEffect(() => {
@@ -780,15 +836,7 @@ const ChatPage = () => {
   const searchPrev = () => { if (matchIds.length) setSearchMatchIdx((i) => (i - 1 + matchIds.length) % matchIds.length); };
   useEffect(() => { setSearchMatchIdx(0); }, [searchQuery]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typingNames]);
   useEffect(() => { if (replyTarget) textareaRef.current?.focus(); }, [replyTarget]);
-
-  const triggerTypingSimulation = useCallback(() => {
-    if (typingDismissTimer.current) clearTimeout(typingDismissTimer.current);
-    const shuffled = [...TYPERS].sort(() => Math.random() - 0.5);
-    setTypingNames(shuffled.slice(0, Math.random() > 0.5 ? 1 : 2));
-    typingDismissTimer.current = setTimeout(() => setTypingNames([]), 3000);
-  }, []);
 
   /* ── Mute toggle ── */
   const toggleMute = () => {
@@ -798,14 +846,31 @@ const ChatPage = () => {
     });
   };
 
-  /* ── Send ── */
-  const sendText = () => {
-    const t = text.trim(); if (!t) return;
-    const quoted: QuotedMessage | undefined = replyTarget ? { id: replyTarget.id, sender: replyTarget.sender, senderRole: replyTarget.senderRole, content: quotePreview(replyTarget), type: replyTarget.type } : undefined;
-    setMessages((prev) => [...prev, { id: uid(), type: "text", content: t, sender: MY_NAME, senderRole: IS_ADMIN ? "admin" : "user", timestamp: new Date(), reactions: {}, quotedMessage: quoted }]);
-    setText(""); setReplyTarget(null);
-    // Simulate unread if scrolled up
-    if (showScrollBtn) setUnreadCount((c) => c + 1);
+  /* ── Send text ── */
+  const sendText = async () => {
+    const t = text.trim();
+    if (!t || !user) return;
+
+    const senderRole: SenderRole = isAdmin ? "admin" : "user";
+    const quotedId = replyTarget?.id || null;
+
+    setText("");
+    setReplyTarget(null);
+
+    const { error } = await supabase.from("messages").insert({
+      user_id: user.id,
+      content: t,
+      type: "text",
+      sender_name: myName,
+      sender_role: senderRole,
+      sender_avatar_url: profile?.avatar_url || null,
+      quoted_message_id: quotedId,
+    } as any);
+
+    if (error) {
+      toast.error("Failed to send message");
+      console.error(error);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -813,53 +878,74 @@ const ChatPage = () => {
     if (e.key === "Escape") setReplyTarget(null);
   };
 
-  /* Image */
+  /* Image — still client-side for now */
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
+    const file = e.target.files?.[0]; if (!file || !user) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const quoted: QuotedMessage | undefined = replyTarget ? { id: replyTarget.id, sender: replyTarget.sender, senderRole: replyTarget.senderRole, content: quotePreview(replyTarget), type: replyTarget.type } : undefined;
-      setMessages((prev) => [...prev, { id: uid(), type: "image", content: file.name, sender: MY_NAME, senderRole: IS_ADMIN ? "admin" : "user", timestamp: new Date(), reactions: {}, imagePreview: ev.target?.result as string, quotedMessage: quoted }]);
+    reader.onload = async (ev) => {
+      const imageData = ev.target?.result as string;
+      const senderRole: SenderRole = isAdmin ? "admin" : "user";
+      await supabase.from("messages").insert({
+        user_id: user.id,
+        content: file.name,
+        type: "image",
+        image_url: imageData,
+        sender_name: myName,
+        sender_role: senderRole,
+        sender_avatar_url: profile?.avatar_url || null,
+        quoted_message_id: replyTarget?.id || null,
+      } as any);
       setReplyTarget(null);
     };
-    reader.readAsDataURL(file); e.target.value = "";
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   /* Audio */
   const startRecording = () => { setIsRecording(true); setRecordingMs(0); recordTimer.current = setInterval(() => setRecordingMs((ms) => ms + 100), 100); };
-  const stopRecording = () => {
-    if (!isRecording) return; setIsRecording(false);
+  const stopRecording = async () => {
+    if (!isRecording || !user) return;
+    setIsRecording(false);
     if (recordTimer.current) clearInterval(recordTimer.current);
     const duration = (recordingMs / 1000).toFixed(1);
-    const quoted: QuotedMessage | undefined = replyTarget ? { id: replyTarget.id, sender: replyTarget.sender, senderRole: replyTarget.senderRole, content: quotePreview(replyTarget), type: replyTarget.type } : undefined;
-    setMessages((prev) => [...prev, { id: uid(), type: "audio", content: `Voice message (${duration}s)`, sender: MY_NAME, senderRole: IS_ADMIN ? "admin" : "user", timestamp: new Date(), reactions: {}, quotedMessage: quoted }]);
-    setRecordingMs(0); setReplyTarget(null);
+    const senderRole: SenderRole = isAdmin ? "admin" : "user";
+    await supabase.from("messages").insert({
+      user_id: user.id,
+      content: `Voice message (${duration}s)`,
+      type: "audio",
+      sender_name: myName,
+      sender_role: senderRole,
+      sender_avatar_url: profile?.avatar_url || null,
+      quoted_message_id: replyTarget?.id || null,
+    } as any);
+    setRecordingMs(0);
+    setReplyTarget(null);
   };
 
-  /* Pin / Unpin */
-  const pinMessage = (id: string) => setMessages((prev) => prev.map((m) => ({ ...m, pinned: m.id === id ? true : m.pinned })));
-  const unpinMessage = (id: string) => setMessages((prev) => prev.map((m) => ({ ...m, pinned: m.id === id ? false : m.pinned })));
+  /* Pin / Unpin — DB update */
+  const pinMessage = async (id: string) => {
+    await supabase.from("messages").update({ pinned: true } as any).eq("id", id);
+  };
+  const unpinMessage = async (id: string) => {
+    await supabase.from("messages").update({ pinned: false } as any).eq("id", id);
+  };
 
-  /* Delete */
+  /* Delete — soft delete in DB */
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
-  const deleteMessage = useCallback((id: string) => {
+  const deleteMessage = useCallback(async (id: string) => {
     setDeletingIds((prev) => new Set([...prev, id]));
-    setTimeout(() => {
+    setTimeout(async () => {
       setDeletingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
-      setMessages((prev) => prev.map((m) => {
-        if (m.id === id) return { ...m, deleted: true, pinned: false, reactions: {}, myReaction: undefined };
-        if (m.quotedMessage?.id === id) return { ...m, quotedMessage: { ...m.quotedMessage, deleted: true } };
-        return m;
-      }));
+      await supabase.from("messages").update({ deleted: true, pinned: false } as any).eq("id", id);
     }, 350);
   }, []);
 
-  /* Edit */
-  const editMessage = useCallback((id: string, newContent: string) => {
-    setMessages((prev) => prev.map((m) => m.id === id ? { ...m, content: newContent, edited: true } : m));
+  /* Edit — DB update */
+  const editMessage = useCallback(async (id: string, newContent: string) => {
+    await supabase.from("messages").update({ content: newContent, edited: true } as any).eq("id", id);
   }, []);
 
-  /* React */
+  /* React — client-side only for now */
   const reactToMessage = useCallback((msgId: string, emoji: Emoji) => {
     setMessages((prev) => prev.map((m) => {
       if (m.id !== msgId) return m;
@@ -901,17 +987,14 @@ const ChatPage = () => {
           </div>
           <div className="flex-1" />
 
-          {/* Mute toggle */}
           <button onClick={toggleMute} className="rounded-xl p-2 transition-all hover:opacity-80 active:scale-90" style={{ background: isMuted ? "hsla(0,0%,50%,0.15)" : "transparent", border: "1px solid transparent", color: "hsl(var(--muted-foreground))" }} title={isMuted ? "Unmute" : "Mute"}>
             {isMuted ? <BellOff size={14} /> : <Bell size={14} />}
           </button>
 
-          {/* Search toggle */}
           <button onClick={searchOpen ? closeSearch : openSearch} className="rounded-xl p-2 transition-all hover:opacity-80 active:scale-90" style={{ background: searchOpen ? "hsla(315,80%,40%,0.25)" : "transparent", border: searchOpen ? "1px solid hsla(315,60%,55%,0.35)" : "1px solid transparent", color: searchOpen ? "hsl(315,90%,65%)" : "hsl(var(--muted-foreground))" }} title="Search messages">
             <Search size={14} />
           </button>
 
-          {/* Members panel toggle */}
           <button onClick={() => setShowMembers(true)} className="rounded-xl p-2 transition-all hover:opacity-80 active:scale-90" style={{ background: "transparent", border: "1px solid transparent", color: "hsl(var(--muted-foreground))" }} title="Group info">
             <Users size={14} />
           </button>
@@ -921,7 +1004,7 @@ const ChatPage = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "hsl(142,70%,55%)" }} />
               <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "hsl(142,70%,55%)" }} />
             </span>
-            <span className="text-xs font-medium" style={{ color: "hsl(142,70%,55%)" }}>24 online</span>
+            <span className="text-xs font-medium" style={{ color: "hsl(142,70%,55%)" }}>{chatMembers.length} online</span>
           </div>
         </div>
 
@@ -937,36 +1020,49 @@ const ChatPage = () => {
           className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 min-h-0"
           style={{ scrollbarWidth: "thin", scrollbarColor: "hsla(315,40%,30%,0.3) transparent" }}
         >
-          {messages.map((msg, i) => {
-            const isMatch = matchIds.includes(msg.id);
-            const isActive = isMatch && matchIds[searchMatchIdx] === msg.id;
-            const showUnreadSep = i === lastReadIndex + 1 && i > 0;
-            return (
-              <div key={msg.id}>
-                {showUnreadSep && <UnreadSeparator />}
-                <div
-                  ref={(el) => {
-                    if (el) msgRefs.current.set(msg.id, el); else msgRefs.current.delete(msg.id);
-                    if (msg.pinned && el) pinnedMsgRef.current = el;
-                  }}
-                  style={{
-                    borderRadius: 16, transition: "background 0.4s ease, box-shadow 0.3s ease",
-                    ...(deletingIds.has(msg.id) ? { animation: "msg-delete-out 0.35s cubic-bezier(0.4,0,1,1) both", pointerEvents: "none" as const } : {}),
-                    ...(isActive ? { boxShadow: "0 0 0 2px hsl(44,100%,58%), 0 0 18px hsla(44,100%,55%,0.25)" } : isMatch ? { boxShadow: "0 0 0 1.5px hsla(44,100%,58%,0.45)" } : {}),
-                  }}
-                >
-                  <MessageBubble
-                    msg={msg} isOwn={msg.sender === MY_NAME} isAdmin={IS_ADMIN}
-                    onPin={pinMessage} onUnpin={unpinMessage} onReact={reactToMessage}
-                    onReply={setReplyTarget} onScrollTo={scrollToMessage}
-                    onDelete={deleteMessage} onEdit={editMessage}
-                    searchQuery={searchOpen ? searchQuery : ""}
-                  />
-                </div>
+          {loading ? (
+            <div className="flex items-center justify-center flex-1">
+              <div className="flex items-center gap-3">
+                {[0, 1, 2].map((i) => (
+                  <span key={i} style={{ display: "block", width: 8, height: 8, borderRadius: "50%", background: "hsl(315,90%,65%)", animation: `typing-bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                ))}
+                <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>Loading messages…</span>
               </div>
-            );
-          })}
-          <TypingIndicator names={typingNames} />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center flex-1 gap-3">
+              <MessageCircle size={40} style={{ color: "hsl(var(--muted-foreground))", opacity: 0.3 }} />
+              <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No messages yet. Start the conversation!</p>
+            </div>
+          ) : (
+            messages.map((msg) => {
+              const isMatch = matchIds.includes(msg.id);
+              const isActive = isMatch && matchIds[searchMatchIdx] === msg.id;
+              return (
+                <div key={msg.id}>
+                  <div
+                    ref={(el) => {
+                      if (el) msgRefs.current.set(msg.id, el); else msgRefs.current.delete(msg.id);
+                      if (msg.pinned && el) pinnedMsgRef.current = el;
+                    }}
+                    style={{
+                      borderRadius: 16, transition: "background 0.4s ease, box-shadow 0.3s ease",
+                      ...(deletingIds.has(msg.id) ? { animation: "msg-delete-out 0.35s cubic-bezier(0.4,0,1,1) both", pointerEvents: "none" as const } : {}),
+                      ...(isActive ? { boxShadow: "0 0 0 2px hsl(44,100%,58%), 0 0 18px hsla(44,100%,55%,0.25)" } : isMatch ? { boxShadow: "0 0 0 1.5px hsla(44,100%,58%,0.45)" } : {}),
+                    }}
+                  >
+                    <MessageBubble
+                      msg={msg} isOwn={msg.senderId === myId} isAdmin={isAdmin}
+                      onPin={pinMessage} onUnpin={unpinMessage} onReact={reactToMessage}
+                      onReply={setReplyTarget} onScrollTo={scrollToMessage}
+                      onDelete={deleteMessage} onEdit={editMessage}
+                      searchQuery={searchOpen ? searchQuery : ""}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          )}
           <div ref={bottomRef} />
         </div>
 
@@ -999,8 +1095,7 @@ const ChatPage = () => {
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
 
-
-              <textarea ref={textareaRef} value={text} onChange={(e) => { setText(e.target.value); if (e.target.value) triggerTypingSimulation(); }} onKeyDown={handleKeyDown}
+              <textarea ref={textareaRef} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown}
                 placeholder={replyTarget ? `Replying to ${replyTarget.sender}…` : "Type a message…"} rows={1}
                 className="flex-1 resize-none rounded-xl px-4 py-2.5 text-sm leading-relaxed glass-input" style={{ color: "hsl(var(--foreground))", minHeight: 42, maxHeight: 100, fontFamily: "inherit" }}
               />
@@ -1019,7 +1114,7 @@ const ChatPage = () => {
       </div>
 
       {/* Modals & Panels */}
-      {showMembers && <MemberPanel onClose={() => setShowMembers(false)} />}
+      {showMembers && <MemberPanel members={chatMembers} onClose={() => setShowMembers(false)} />}
     </div>
   );
 };
