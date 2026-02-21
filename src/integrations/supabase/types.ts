@@ -19,7 +19,9 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           credits: number
+          first_name: string | null
           id: string
+          last_name: string | null
           referral_code: string
           referred_by: string | null
           telegram_id: string | null
@@ -29,7 +31,9 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           credits?: number
+          first_name?: string | null
           id: string
+          last_name?: string | null
           referral_code?: string
           referred_by?: string | null
           telegram_id?: string | null
@@ -39,7 +43,9 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           credits?: number
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           referral_code?: string
           referred_by?: string | null
           telegram_id?: string | null
