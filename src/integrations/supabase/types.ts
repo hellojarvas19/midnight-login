@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          deleted: boolean
+          edited: boolean
+          id: string
+          image_url: string | null
+          pinned: boolean
+          quoted_message_id: string | null
+          sender_avatar_url: string | null
+          sender_name: string
+          sender_role: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          deleted?: boolean
+          edited?: boolean
+          id?: string
+          image_url?: string | null
+          pinned?: boolean
+          quoted_message_id?: string | null
+          sender_avatar_url?: string | null
+          sender_name: string
+          sender_role?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          deleted?: boolean
+          edited?: boolean
+          id?: string
+          image_url?: string | null
+          pinned?: boolean
+          quoted_message_id?: string | null
+          sender_avatar_url?: string | null
+          sender_name?: string
+          sender_role?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_quoted_message_id_fkey"
+            columns: ["quoted_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
