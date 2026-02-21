@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 /* ─── Animated counter hook ─── */
 function useCountUp(target: number, duration = 1400, delay = 0) {
   const [value, setValue] = useState(0);
@@ -175,19 +176,33 @@ const CrownSparkles = () => {
 
 const ProfilePage = () => {
   const { activePlan } = usePlan();
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [copiedId, setCopiedId]           = useState(false);
   const [copiedRef, setCopiedRef]         = useState(false);
   const [loggingOut, setLoggingOut]       = useState(false);
   const [loggedOut, setLoggedOut]         = useState(false);
   const [creditsBarWidth, setCreditsBarWidth] = useState(0);
-  const user = MOCK_USER;
 
-  // Animated counters — staggered so card entrances finish first
+  // Merge real profile with fallback mock data
+  const user = {
+    name: profile?.username || MOCK_USER.name,
+    telegramId: profile?.telegram_id || MOCK_USER.telegramId,
+    username: profile?.username ? `@${profile.username}` : MOCK_USER.username,
+    avatarUrl: profile?.avatar_url || MOCK_USER.avatarUrl,
+    joinedDate: profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : MOCK_USER.joinedDate,
+    credits: profile?.credits ?? MOCK_USER.credits,
+    plan: "Pro",
+    referralCode: profile?.referral_code || MOCK_USER.referralCode,
+    referralCount: 0,
+    referralLink: `https://t.me/OxAdamCheckerBot?start=${profile?.referral_code || MOCK_USER.referralCode}`,
+  };
+
+  // Animated counters
   const creditsCount         = useCountUp(user.credits,              1600, 200);
   const referralFriendsCount = useCountUp(user.referralCount,        1200, 350);
   const referralCreditsCount = useCountUp(user.referralCount * 100,  1400, 450);
 
-  // Animate credits bar from 0 → 7% on mount
   useEffect(() => {
     const t = setTimeout(() => setCreditsBarWidth(7), 120);
     return () => clearTimeout(t);
@@ -196,9 +211,8 @@ const ProfilePage = () => {
   const handleLogout = async () => {
     if (loggingOut || loggedOut) return;
     setLoggingOut(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setLoggingOut(false);
-    setLoggedOut(true);
+    await signOut();
+    navigate("/");
   };
 
   const handleCopyId = async () => {
