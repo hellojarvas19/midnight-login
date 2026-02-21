@@ -10,6 +10,7 @@ interface Profile {
   telegram_id: string | null;
   avatar_url: string | null;
   credits: number;
+  plan: string;
   referral_code: string;
   referred_by: string | null;
   created_at: string;

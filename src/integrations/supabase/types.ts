@@ -81,6 +81,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          plan: string
           referral_code: string
           referred_by: string | null
           telegram_id: string | null
@@ -93,6 +94,7 @@ export type Database = {
           first_name?: string | null
           id: string
           last_name?: string | null
+          plan?: string
           referral_code?: string
           referred_by?: string | null
           telegram_id?: string | null
@@ -105,6 +107,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          plan?: string
           referral_code?: string
           referred_by?: string | null
           telegram_id?: string | null
