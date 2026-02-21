@@ -344,11 +344,29 @@ const ProfilePage = () => {
             }}
           >
             <div className="rounded-full overflow-hidden w-full h-full">
-              <img
-                src={user.avatarUrl}
-                alt="Profile avatar"
-                className="w-full h-full object-cover"
-              />
+              {user.avatarUrl && user.avatarUrl !== logoCharacter ? (
+                <img
+                  src={user.avatarUrl}
+                  alt="Profile avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, hsla(315,90%,45%,0.4) 0%, hsla(330,18%,8%,0.9) 100%)",
+                  }}
+                >
+                  <User
+                    size={38}
+                    strokeWidth={1.5}
+                    style={{
+                      color: "hsl(var(--primary))",
+                      filter: "drop-shadow(0 0 8px hsla(315,90%,55%,0.5))",
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
           {/* Verified badge */}
