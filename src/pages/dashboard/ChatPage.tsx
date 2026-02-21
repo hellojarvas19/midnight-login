@@ -857,7 +857,7 @@ const ChatPage = () => {
     setText("");
     setReplyTarget(null);
 
-    const { error } = await supabase.from("messages").insert({
+    const { data: inserted, error } = await supabase.from("messages").insert({
       user_id: user.id,
       content: t,
       type: "text",
@@ -865,11 +865,26 @@ const ChatPage = () => {
       sender_role: senderRole,
       sender_avatar_url: profile?.avatar_url || null,
       quoted_message_id: quotedId,
-    } as any);
+    } as any).select().single();
 
     if (error) {
       toast.error("Failed to send message");
       console.error(error);
+    } else if (inserted) {
+      // Immediately add the message to state so it shows without waiting for realtime
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === (inserted as any).id)) return prev;
+        const msg = dbRowToMessage(inserted, replyTarget ? {
+          id: replyTarget.id,
+          sender_name: replyTarget.sender,
+          sender_role: replyTarget.senderRole,
+          content: replyTarget.content,
+          type: replyTarget.type,
+          deleted: replyTarget.deleted,
+        } : undefined);
+        return [...prev, msg];
+      });
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     }
   };
 
@@ -885,7 +900,7 @@ const ChatPage = () => {
     reader.onload = async (ev) => {
       const imageData = ev.target?.result as string;
       const senderRole: SenderRole = isAdmin ? "admin" : "user";
-      await supabase.from("messages").insert({
+      const { data: inserted, error } = await supabase.from("messages").insert({
         user_id: user.id,
         content: file.name,
         type: "image",
@@ -894,7 +909,14 @@ const ChatPage = () => {
         sender_role: senderRole,
         sender_avatar_url: profile?.avatar_url || null,
         quoted_message_id: replyTarget?.id || null,
-      } as any);
+      } as any).select().single();
+      if (!error && inserted) {
+        setMessages((prev) => {
+          if (prev.find((m) => m.id === (inserted as any).id)) return prev;
+          return [...prev, dbRowToMessage(inserted)];
+        });
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      }
       setReplyTarget(null);
     };
     reader.readAsDataURL(file);
