@@ -1,4 +1,5 @@
 import { Crown, Check, Zap, Star, Sparkles } from "lucide-react";
+import { usePlan, type PlanId } from "@/contexts/PlanContext";
 
 const PLANS = [
   {
@@ -58,6 +59,7 @@ const PLANS = [
 ];
 
 const PlansPage = () => {
+  const { activePlan, setPlanId } = usePlan();
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -93,6 +95,7 @@ const PlansPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {PLANS.map((plan, idx) => {
           const PlanIcon = plan.icon;
+          const isCurrent = plan.id === activePlan.id;
           return (
             <div
               key={plan.id}
@@ -212,32 +215,33 @@ const PlansPage = () => {
               <div className="px-5 pb-5 pt-2">
                 <button
                   type="button"
+                  onClick={() => !isCurrent && setPlanId(plan.id as PlanId)}
                   className="w-full rounded-xl py-2.5 text-sm font-bold tracking-wide transition-all duration-200"
                   style={{
-                    background: plan.current
+                    background: isCurrent
                       ? "transparent"
                       : plan.popular
                         ? "linear-gradient(135deg, hsl(42,100%,48%), hsl(48,100%,58%))"
                         : "hsla(315,70%,45%,0.25)",
-                    border: plan.current
+                    border: isCurrent
                       ? `1px solid ${plan.border}`
                       : plan.popular
                         ? "1px solid hsla(44,80%,55%,0.5)"
                         : `1px solid ${plan.border}`,
-                    color: plan.current
+                    color: isCurrent
                       ? "hsl(var(--muted-foreground))"
                       : plan.popular
                         ? "hsl(20,15%,10%)"
                         : "hsl(var(--foreground))",
-                    boxShadow: plan.current
+                    boxShadow: isCurrent
                       ? "none"
                       : plan.popular
                         ? "0 0 20px hsla(44,100%,55%,0.3)"
                         : `0 0 12px ${plan.glow}`,
-                    cursor: plan.current ? "default" : "pointer",
+                    cursor: isCurrent ? "default" : "pointer",
                   }}
                 >
-                  {plan.current ? "Current Plan" : "Upgrade"}
+                  {isCurrent ? "Current Plan" : "Upgrade"}
                 </button>
               </div>
             </div>

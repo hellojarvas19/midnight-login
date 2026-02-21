@@ -45,6 +45,7 @@ import {
   Diamond,
 } from "lucide-react";
 import logoCharacter from "@/assets/logo-character.jpg";
+import { usePlan } from "@/contexts/PlanContext";
 
 // ─── Mock Telegram user data ───────────────────────────────────────────────
 const MOCK_USER = {
@@ -173,6 +174,7 @@ const CrownSparkles = () => {
 };
 
 const ProfilePage = () => {
+  const { activePlan } = usePlan();
   const [copiedId, setCopiedId]           = useState(false);
   const [copiedRef, setCopiedRef]         = useState(false);
   const [loggingOut, setLoggingOut]       = useState(false);
@@ -377,7 +379,7 @@ const ProfilePage = () => {
         >
           <Zap size={12} style={{ color: "hsl(var(--primary))" }} />
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--primary))" }}>
-            {user.plan} Plan
+            {activePlan.name} Plan
           </span>
         </div>
 
@@ -409,9 +411,9 @@ const ProfilePage = () => {
           </div>
           <div className="grid grid-cols-3 divide-x" style={{ borderColor: "hsla(44,60%,40%,0.12)" }}>
             {[
-              { icon: CreditCard, label: "Check Limit", value: "500 CCs", color: "hsl(var(--primary))", bg: "hsla(315,80%,40%,0.15)" },
-              { icon: Zap, label: "Daily Credits", value: "5,000", color: "hsl(48,100%,65%)", bg: "hsla(44,80%,40%,0.15)" },
-              { icon: Clock, label: "Access", value: "7 Days", color: "hsl(142,70%,55%)", bg: "hsla(142,60%,30%,0.15)" },
+              { icon: CreditCard, label: "Check Limit", value: activePlan.checkLimit, color: "hsl(var(--primary))", bg: "hsla(315,80%,40%,0.15)" },
+              { icon: Zap, label: "Daily Credits", value: activePlan.dailyCredits, color: "hsl(48,100%,65%)", bg: "hsla(44,80%,40%,0.15)" },
+              { icon: Clock, label: "Access", value: activePlan.access, color: "hsl(142,70%,55%)", bg: "hsla(142,60%,30%,0.15)" },
             ].map((item) => {
               const ItemIcon = item.icon;
               return (
