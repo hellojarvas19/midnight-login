@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Home, CreditCard, ChevronLeft, ChevronRight, Crown, Zap, MessageCircle, Diamond } from "lucide-react";
+import { Home, CreditCard, ChevronLeft, ChevronRight, Crown, Zap, MessageCircle, Diamond, ShieldAlert } from "lucide-react";
 import { LogoMark } from "@/components/LogoMark";
 import logoCharacter from "@/assets/logo-character.jpg";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Mock account snapshot — mirrors MOCK_USER in ProfilePage
 const ACCOUNT = { plan: "Pro", credits: 2_480, username: "@0xadam_checker" };
 
-type Section = "home" | "chat" | "checker" | "plans" | "profile";
+type Section = "home" | "chat" | "checker" | "plans" | "profile" | "owner";
 
 interface AppSidebarProps {
   active: Section;
@@ -23,6 +23,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: typeof Home }[] = [
   { id: "checker", label: "Checker", Icon: CreditCard    },
   { id: "plans",   label: "Plans",   Icon: Diamond       },
   { id: "profile", label: "Profile", Icon: Crown         },
+  { id: "owner",   label: "Owner",   Icon: ShieldAlert   },
 ];
 
 const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSidebarProps) => {
