@@ -106,7 +106,15 @@ const AuthCard = () => {
       )}
 
       {/* Telegram Login Widget Container — the only login button */}
-      <div id="telegram-login-container" className="flex justify-center mb-4" />
+      <div
+        id="telegram-login-container"
+        className="flex justify-center mb-4 rounded-xl p-3"
+        style={{
+          background: "hsla(200, 80%, 50%, 0.08)",
+          border: "1px solid hsla(200, 70%, 55%, 0.18)",
+          boxShadow: "0 0 24px hsla(200, 80%, 50%, 0.1), inset 0 0 0 1px hsla(200, 80%, 60%, 0.05)",
+        }}
+      />
 
       {/* Footer note */}
       <p className="text-center text-xs mt-5" style={{ color: "hsl(var(--muted-foreground))" }}>
