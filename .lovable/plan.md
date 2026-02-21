@@ -1,95 +1,66 @@
 
 
-# Telegram-Only Authentication
+# Persist Plans and Credits to Database
 
-Replace the current email/password login with **Telegram Login Widget** as the sole authentication method, and display real Telegram profile data (photo, name, username, user ID) on the Profile page.
-
----
-
-## How It Works
-
-1. User clicks **"Continue with Telegram"** on the login page
-2. Telegram Login Widget opens a popup for authorization
-3. Telegram returns signed user data (id, first_name, last_name, username, photo_url, hash)
-4. A backend function **verifies the hash** using the Bot Token, then creates or signs in the user
-5. Profile is auto-populated with Telegram data (avatar, name, username, Telegram ID)
-6. User lands on the dashboard with their real Telegram profile displayed
-
----
-
-## What You Need
-
-- A **Telegram Bot Token** (from @BotFather on Telegram). You'll be prompted to enter it securely.
+Currently, the plan selection is stored only in React state (PlanContext) and resets on every page refresh. This plan will move it to the database so it persists across sessions.
 
 ---
 
 ## Database Changes
 
-- Add `first_name` and `last_name` columns to the `profiles` table
-- Update the `handle_new_user()` trigger to include these new fields
+Add a `plan` column to the existing `profiles` table:
+
+```text
+profiles table:
+  + plan text NOT NULL DEFAULT 'free'    -- stores 'free', 'pro', or 'enterprise'
+```
+
+The `credits` column already exists (integer, default 0), so no change needed there.
 
 ---
 
-## Backend Function
+## Backend Changes
 
-Create a `telegram-auth` function that:
-- Receives the Telegram login widget callback data
-- Verifies the data hash using HMAC-SHA256 with the bot token
-- Creates a new user (or finds existing) using the Telegram ID as identifier
-- Stores Telegram profile data (photo, name, username) in the `profiles` table
-- Returns a valid session for the frontend
+No new backend functions needed. The existing RLS policies on `profiles` already allow users to read and update their own profile, which is sufficient.
 
 ---
 
-## UI Changes
+## Frontend Changes
 
-### AuthCard (Login Page)
-- Remove email/password fields, signup toggle, and forgot-password link
-- Show only the branded **"Continue with Telegram"** button
-- On click, open the Telegram Login Widget popup
-- On successful callback, send data to the backend function and log in
+### 1. Update PlanContext to use the database
+- On load, read the user's `plan` and `credits` from `profiles` (via AuthContext's existing profile data)
+- When `setPlanId()` is called, update the `profiles` table and refresh the local state
+- Remove the hardcoded default of `"pro"` -- default to whatever is in the database
 
-### ProfilePage
-- Display real Telegram data: profile photo, first + last name, @username, Telegram user ID
-- Remove all mock/fallback data references
+### 2. Update AuthContext Profile type
+- Add `plan` field to the `Profile` interface (it will come from the database automatically since we already `SELECT *`)
 
-### Cleanup
-- Remove the `/reset-password` route and `ResetPassword.tsx` page (no longer needed)
-- Simplify `AuthContext` to remove `signUp` and email-based `signIn`
+### 3. Update PlansPage
+- No major changes needed -- it already calls `setPlanId()` from PlanContext, which will now persist to the database
+
+### 4. Update ProfilePage
+- The plan badge already reads from `activePlan` via `usePlan()`, so it will automatically reflect the persisted value
 
 ---
 
 ## Technical Details
 
-### Telegram Login Widget Integration
-- Embed the Telegram Login Widget script (`https://telegram.org/js/telegram-widget.js`)
-- Configure with the bot username and a JS callback function
-- The widget returns: `id`, `first_name`, `last_name`, `username`, `photo_url`, `auth_date`, `hash`
-
-### Hash Verification (in edge function)
-```
-secret_key = SHA256(bot_token)
-data_check_string = sorted key=value pairs (excluding hash)
-verify HMAC-SHA256(secret_key, data_check_string) === hash
+### Migration SQL
+```sql
+ALTER TABLE public.profiles 
+ADD COLUMN plan text NOT NULL DEFAULT 'free';
 ```
 
-### User Creation Strategy
-- Use `supabase.auth.admin.createUser()` with a deterministic email like `tg_{telegram_id}@telegram.user`
-- If user already exists, sign them in using `admin.generateLink()` or a custom approach
-- Store all Telegram fields in `profiles` table
+### PlanContext rewrite
+- Accept `profile` from AuthContext to initialize the plan
+- `setPlanId` will call `supabase.from('profiles').update({ plan }).eq('id', user.id)` then refresh the profile
+- Export a loading state so the UI doesn't flash the wrong plan
 
 ### Files Modified
-- `src/components/AuthCard.tsx` -- Telegram button only
-- `src/contexts/AuthContext.tsx` -- Add `signInWithTelegram()`, remove email methods
-- `src/pages/dashboard/ProfilePage.tsx` -- Use real Telegram profile data
-- `src/App.tsx` -- Remove reset-password route
+- `src/contexts/PlanContext.tsx` -- Read/write plan from database via Supabase
+- `src/contexts/AuthContext.tsx` -- Add `plan` to Profile interface
 
-### Files Created
-- `supabase/functions/telegram-auth/index.ts` -- Verify and authenticate
-
-### Files Deleted
-- `src/pages/ResetPassword.tsx`
-
-### Migration
-- Add `first_name text`, `last_name text` columns to `profiles`
+### Files Unchanged
+- `src/pages/dashboard/PlansPage.tsx` -- Already uses `usePlan()` correctly
+- `src/pages/dashboard/ProfilePage.tsx` -- Already uses `usePlan()` correctly
 
