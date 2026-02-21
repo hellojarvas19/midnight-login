@@ -415,31 +415,18 @@ const ProfilePage = () => {
         </div>
 
         {/* Plan + Admin badges */}
-        <div className="flex items-center gap-2">
-          <div
-            className="flex items-center gap-1.5 rounded-full px-3 py-1"
-            style={{
-              background: "hsla(315,80%,40%,0.2)",
-              border: "1px solid hsla(315,70%,55%,0.35)",
-            }}
-          >
-            <Zap size={12} style={{ color: "hsl(var(--primary))" }} />
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--primary))" }}>
-              {activePlan.name} Plan
-            </span>
-          </div>
-
+        <div className="flex flex-col items-center gap-2">
           {isAdmin && (
             <div
-              className="flex items-center gap-1.5 rounded-full px-3 py-1"
+              className="flex items-center gap-1.5 rounded-full px-4 py-1.5"
               style={{
                 background: "hsla(44,100%,50%,0.15)",
                 border: "1px solid hsla(44,100%,58%,0.4)",
-                boxShadow: "0 0 12px hsla(44,100%,55%,0.25)",
+                boxShadow: "0 0 12px hsla(44,100%,55%,0.25), 0 0 24px hsla(44,100%,55%,0.12)",
                 animation: "gold-aura-pulse 2.4s ease-in-out infinite",
               }}
             >
-              <svg width="12" height="12" viewBox="0 0 48 36" fill="none">
+              <svg width="14" height="11" viewBox="0 0 48 36" fill="none">
                 <path d="M4 30 L4 22 L12 8 L24 18 L36 8 L44 22 L44 30 Z" fill="url(#adminCrownGrad)" stroke="hsl(45,100%,75%)" strokeWidth="1.2" strokeLinejoin="round"/>
                 <rect x="4" y="27" width="40" height="5" rx="2" fill="url(#adminBandGrad)" stroke="hsl(45,100%,75%)" strokeWidth="0.8"/>
                 <circle cx="24" cy="24" r="3" fill="hsl(315,95%,65%)"/>
@@ -469,6 +456,18 @@ const ProfilePage = () => {
               </span>
             </div>
           )}
+          <div
+            className="flex items-center gap-1.5 rounded-full px-3 py-1"
+            style={{
+              background: "hsla(315,80%,40%,0.2)",
+              border: "1px solid hsla(315,70%,55%,0.35)",
+            }}
+          >
+            <Zap size={12} style={{ color: "hsl(var(--primary))" }} />
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--primary))" }}>
+              {activePlan.name} Plan
+            </span>
+          </div>
         </div>
 
         {/* Plan Details */}
