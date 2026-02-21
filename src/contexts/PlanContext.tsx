@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { useAuth } from "./AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export type PlanId = "free" | "pro" | "enterprise";
 
@@ -19,17 +21,37 @@ const PLAN_DETAILS: Record<PlanId, PlanDetails> = {
 interface PlanContextValue {
   activePlan: PlanDetails;
   setPlanId: (id: PlanId) => void;
+  loading: boolean;
 }
 
 const PlanContext = createContext<PlanContextValue>({
-  activePlan: PLAN_DETAILS.pro,
+  activePlan: PLAN_DETAILS.free,
   setPlanId: () => {},
+  loading: true,
 });
 
 export const PlanProvider = ({ children }: { children: ReactNode }) => {
-  const [planId, setPlanId] = useState<PlanId>("pro");
+  const { user, profile, refreshProfile } = useAuth();
+  const [planId, setPlanIdState] = useState<PlanId>("free");
+  const [loading, setLoading] = useState(true);
+
+  // Sync from profile
+  useEffect(() => {
+    if (profile?.plan && (profile.plan === "free" || profile.plan === "pro" || profile.plan === "enterprise")) {
+      setPlanIdState(profile.plan as PlanId);
+    }
+    setLoading(false);
+  }, [profile]);
+
+  const setPlanId = useCallback(async (id: PlanId) => {
+    if (!user) return;
+    setPlanIdState(id);
+    await supabase.from("profiles").update({ plan: id } as any).eq("id", user.id);
+    await refreshProfile();
+  }, [user, refreshProfile]);
+
   return (
-    <PlanContext.Provider value={{ activePlan: PLAN_DETAILS[planId], setPlanId }}>
+    <PlanContext.Provider value={{ activePlan: PLAN_DETAILS[planId], setPlanId, loading }}>
       {children}
     </PlanContext.Provider>
   );
