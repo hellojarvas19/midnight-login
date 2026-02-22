@@ -1,5 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { usePlan } from "@/contexts/PlanContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Upload, Play, Loader2, CheckCircle2, XCircle, CreditCard,
   Trash2, FileText, ClipboardList, Copy, Download, Check,
@@ -141,6 +144,22 @@ const SparklesBurst = ({ active }: { active: boolean }) => {
 
 const CheckerPage = () => {
   const { toast } = useToast();
+  const { activePlan, isPlanActive } = usePlan();
+  const { user: authUser, profile, refreshProfile } = useAuth();
+
+  // ── Daily usage tracking ──
+  const getDailyKey = () => `checker_daily_${authUser?.id}_${new Date().toISOString().slice(0, 10)}`;
+  const getDailyUsage = () => {
+    try { return parseInt(localStorage.getItem(getDailyKey()) || "0", 10); } catch { return 0; }
+  };
+  const addDailyUsage = (count: number) => {
+    const key = getDailyKey();
+    const current = getDailyUsage();
+    localStorage.setItem(key, String(current + count));
+  };
+  const dailyLimit = activePlan?.dailyLimit ?? 0;
+  const dailyUsed = getDailyUsage();
+  const dailyRemaining = Math.max(0, dailyLimit - dailyUsed);
 
   // ── Typewriter for heading ──
   const HEADING = "Checker";
@@ -290,19 +309,40 @@ const CheckerPage = () => {
   };
 
   const handleRun = async () => {
+    if (!isPlanActive || !activePlan) {
+      toast({ title: "No active plan", description: "You need an active plan to use the checker.", variant: "destructive" });
+      return;
+    }
+
     const validCards = cards.filter((c) => c.luhnValid);
     if (!gateway || validCards.length === 0) return;
+
+    // Check daily limit
+    const currentUsage = getDailyUsage();
+    const remaining = Math.max(0, activePlan.dailyLimit - currentUsage);
+    if (remaining === 0) {
+      toast({ title: "Daily limit reached", description: `You've used all ${activePlan.dailyLimit.toLocaleString()} credits for today. Resets at midnight.`, variant: "destructive" });
+      return;
+    }
+
+    // Cap cards to remaining daily limit
+    const cardsToCheck = Math.min(validCards.length, remaining);
+    if (cardsToCheck < validCards.length) {
+      toast({ title: "Partial check", description: `Only ${cardsToCheck.toLocaleString()} of ${validCards.length.toLocaleString()} cards will be checked (daily limit).` });
+    }
+
     abortRef.current = false;
     setIsRunning(true);
 
     const updated: CardResult[] = cards.map((c) => ({ ...c, status: "pending" as CardResult["status"] }));
     setCards([...updated]);
 
+    let checkedCount = 0;
     for (let i = 0; i < updated.length; i++) {
       if (abortRef.current) break;
-      // Skip cards that fail Luhn — leave them as "pending" visually
       if (!updated[i].luhnValid) continue;
-      // Consume next proxy in rotation (used for request routing in real impl)
+      if (checkedCount >= cardsToCheck) break;
+
       const _proxy = nextProxy(); void _proxy;
       updated[i] = { ...updated[i], status: "checking" as CardResult["status"] };
       setCards([...updated]);
@@ -315,6 +355,19 @@ const CheckerPage = () => {
         status: simulateResult(updated[i].card, gateway) as CardResult["status"],
       };
       setCards([...updated]);
+      checkedCount++;
+    }
+
+    // Deduct credits and track daily usage
+    if (checkedCount > 0) {
+      addDailyUsage(checkedCount);
+
+      // Deduct credits from profile
+      if (authUser && profile) {
+        const newCredits = Math.max(0, (profile.credits || 0) - checkedCount);
+        await supabase.from("profiles").update({ credits: newCredits } as any).eq("id", authUser.id);
+        refreshProfile();
+      }
     }
 
     setIsRunning(false);
@@ -327,9 +380,9 @@ const CheckerPage = () => {
       const hits     = approved + charged;
       toast({
         title: hits > 0 ? "✅ Check Complete" : "❌ Check Complete",
-        description: hits > 0
+        description: `${checkedCount} credits used · ${hits > 0
           ? `${hits} approved${charged > 0 ? ` (${charged} charged)` : ""} · ${declined} declined`
-          : `All ${declined} card${declined !== 1 ? "s" : ""} declined`,
+          : `All ${declined} card${declined !== 1 ? "s" : ""} declined`}`,
         variant: hits > 0 ? "default" : "destructive",
         duration: 5000,
       });
@@ -403,6 +456,33 @@ const CheckerPage = () => {
         <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           Paste a card list or upload a file, select a gateway, then run.
         </p>
+
+        {/* Daily credits bar */}
+        {isPlanActive && activePlan && (
+          <div className="mt-3 flex flex-col gap-1.5">
+            <div className="flex justify-between text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <span className="flex items-center gap-1">
+                <Zap size={11} style={{ color: "hsl(var(--primary))" }} />
+                Daily Credits
+              </span>
+              <span style={{ color: dailyRemaining === 0 ? "hsl(0,75%,60%)" : "hsl(var(--foreground))" }}>
+                {dailyUsed.toLocaleString()} / {dailyLimit.toLocaleString()} used
+              </span>
+            </div>
+            <div className="w-full rounded-full overflow-hidden" style={{ height: 5, background: "hsla(315,40%,20%,0.3)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, (dailyUsed / dailyLimit) * 100)}%`,
+                  background: dailyUsed / dailyLimit > 0.9
+                    ? "linear-gradient(90deg, hsl(0,75%,50%), hsl(0,70%,60%))"
+                    : "linear-gradient(90deg, hsl(315,95%,45%), hsl(315,90%,65%))",
+                  boxShadow: "0 0 8px hsla(315,90%,55%,0.4)",
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Config Card ── */}
