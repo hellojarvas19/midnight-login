@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Menu, ChevronRight, Home, CreditCard, Crown, MessageCircle, Diamond, ShieldAlert } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import ParticleBackground from "@/components/ParticleBackground";
@@ -11,10 +11,11 @@ import PlansPage from "@/pages/dashboard/PlansPage";
 import OwnerPanelPage from "@/pages/dashboard/OwnerPanelPage";
 import { PlanProvider } from "@/contexts/PlanContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 type Section = "home" | "chat" | "checker" | "plans" | "profile" | "owner";
 
-const SECTION_ORDER: Section[] = ["home", "chat", "checker", "plans", "profile", "owner"];
+const ALL_SECTIONS: Section[] = ["home", "chat", "checker", "plans", "profile", "owner"];
 
 const SECTION_TITLE: Record<Section, string> = {
   home:    "Home",
@@ -59,6 +60,24 @@ const Dashboard = () => {
   const [exitContent, setExitContent]         = useState<React.ReactNode>(null);
   const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mainRef       = useRef<HTMLElement | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
+
+  // Check owner role
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([
+      supabase.rpc("has_role", { _user_id: user.id, _role: "owner" }),
+      supabase.rpc("is_primary_owner", { _user_id: user.id }),
+    ]).then(([ownerRes, primaryRes]) => {
+      setIsOwner(!!ownerRes.data || !!primaryRes.data);
+    });
+  }, [user]);
+
+  // Dynamic section order based on owner status
+  const SECTION_ORDER = useMemo<Section[]>(
+    () => isOwner ? ALL_SECTIONS : ALL_SECTIONS.filter((s) => s !== "owner"),
+    [isOwner]
+  );
 
   // Swipe-to-close state
   const touchStartX = useRef<number | null>(null);
@@ -67,6 +86,7 @@ const Dashboard = () => {
 
   const navigateTo = (section: Section) => {
     if (section === active) return;
+    if (section === "owner" && !isOwner) return; // guard
     const fromIdx = SECTION_ORDER.indexOf(active);
     const toIdx   = SECTION_ORDER.indexOf(section);
     const dir: 1 | -1 = toIdx > fromIdx ? 1 : -1;
