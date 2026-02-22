@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /* ─── Types ─── */
 type MessageType = "text" | "image" | "audio";
-type SenderRole  = "user" | "admin";
+type SenderRole  = "user" | "admin" | "owner";
 type Emoji       = "👍" | "❤️" | "😂" | "🔥";
 
 const EMOJI_LIST: Emoji[] = ["👍", "❤️", "😂", "🔥"];
@@ -428,8 +428,9 @@ const MessageBubble = ({
     setMenuOpen(false);
   };
 
-  const bubbleBg = isOwn ? "hsla(315,80%,38%,0.35)" : "hsla(330,18%,8%,0.75)";
-  const bubbleBorder = isOwn ? "hsla(315,60%,55%,0.30)" : "hsla(315,30%,25%,0.22)";
+  const isOwnerMsg = msg.senderRole === "owner";
+  const bubbleBg = isOwnerMsg && isOwn ? "hsla(42,40%,12%,0.45)" : isOwn ? "hsla(315,80%,38%,0.35)" : isOwnerMsg ? "hsla(42,30%,8%,0.55)" : "hsla(330,18%,8%,0.75)";
+  const bubbleBorder = isOwnerMsg ? "hsla(42,60%,40%,0.3)" : isOwn ? "hsla(315,60%,55%,0.30)" : "hsla(315,30%,25%,0.22)";
   const urls = msg.type === "text" ? extractUrls(msg.content) : [];
 
   return (
@@ -441,28 +442,44 @@ const MessageBubble = ({
             className="rounded-full flex items-center justify-center shrink-0 text-xs font-bold cursor-pointer transition-transform hover:scale-105 overflow-hidden"
             style={{
               width: 30, height: 30,
-              background: msg.senderRole === "admin" ? "linear-gradient(135deg, hsl(42,100%,52%), hsl(36,90%,40%))" : "hsla(315,80%,40%,0.25)",
-              border: msg.senderRole === "admin" ? "1px solid hsla(44,100%,58%,0.5)" : "1px solid hsla(315,50%,40%,0.3)",
-              color: msg.senderRole === "admin" ? "hsl(330,15%,5%)" : "hsl(var(--foreground))",
-              boxShadow: msg.senderRole === "admin" ? "0 0 10px hsla(44,100%,55%,0.4)" : "none",
+              background: msg.senderRole === "owner" ? "linear-gradient(135deg, hsl(42,70%,45%), hsl(36,60%,32%))" : msg.senderRole === "admin" ? "linear-gradient(135deg, hsl(42,100%,52%), hsl(36,90%,40%))" : "hsla(315,80%,40%,0.25)",
+              border: msg.senderRole === "owner" ? "1.5px solid hsla(42,70%,50%,0.5)" : msg.senderRole === "admin" ? "1px solid hsla(44,100%,58%,0.5)" : "1px solid hsla(315,50%,40%,0.3)",
+              color: (msg.senderRole === "owner" || msg.senderRole === "admin") ? "hsl(330,15%,5%)" : "hsl(var(--foreground))",
+              boxShadow: msg.senderRole === "owner" ? "0 0 12px hsla(42,70%,40%,0.3)" : msg.senderRole === "admin" ? "0 0 10px hsla(44,100%,55%,0.4)" : "none",
             }}
           >
             {msg.senderAvatar ? (
               <img src={msg.senderAvatar} alt={msg.sender} className="w-full h-full object-cover" />
-            ) : msg.senderRole === "admin" ? <Crown size={12} /> : msg.sender[0].toUpperCase()}
+            ) : (msg.senderRole === "admin" || msg.senderRole === "owner") ? <Crown size={12} /> : msg.sender[0].toUpperCase()}
           </button>
         </UserProfilePopover>
       )}
 
       {/* Bubble column */}
       <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
-        {!isOwn && (
+        {/* Sender name + badge */}
+        {!isOwn ? (
           <div className="flex items-center gap-1.5 px-1">
             <UserProfilePopover name={msg.sender} role={msg.senderRole} avatar={msg.senderAvatar}>
-              <button className="text-xs font-semibold cursor-pointer hover:underline" style={{ color: msg.senderRole === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--muted-foreground))" }}>
-                {msg.senderRole === "admin" && "👑 "}{msg.sender}
+              <button className="text-xs font-semibold cursor-pointer hover:underline" style={{ color: msg.senderRole === "owner" ? "hsl(42,75%,60%)" : msg.senderRole === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--muted-foreground))" }}>
+                {(msg.senderRole === "owner" || msg.senderRole === "admin") && "👑 "}{msg.sender}
               </button>
             </UserProfilePopover>
+            {msg.senderRole === "owner" && (
+              <span
+                className="text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5 leading-none flex items-center gap-1"
+                style={{
+                  background: "linear-gradient(135deg, hsla(42,60%,20%,0.5), hsla(36,50%,15%,0.5))",
+                  border: "1px solid hsla(42,70%,45%,0.35)",
+                  color: "hsl(42,75%,60%)",
+                  boxShadow: "0 0 10px hsla(42,70%,40%,0.15)",
+                  animation: "owner-holo-sweep 4s ease-in-out infinite",
+                }}
+              >
+                <Crown size={8} style={{ filter: "drop-shadow(0 0 3px hsla(42,80%,55%,0.4))" }} />
+                Owner
+              </span>
+            )}
             {msg.senderRole === "admin" && (
               <span
                 className="text-[9px] font-black uppercase tracking-wider rounded-full px-1.5 py-0.5 leading-none"
@@ -477,13 +494,29 @@ const MessageBubble = ({
               </span>
             )}
           </div>
+        ) : isOwnerMsg && (
+          <div className="flex items-center gap-1.5 px-1 justify-end">
+            <span
+              className="text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5 leading-none flex items-center gap-1"
+              style={{
+                background: "linear-gradient(135deg, hsla(42,60%,20%,0.5), hsla(36,50%,15%,0.5))",
+                border: "1px solid hsla(42,70%,45%,0.35)",
+                color: "hsl(42,75%,60%)",
+                boxShadow: "0 0 10px hsla(42,70%,40%,0.15)",
+                animation: "owner-holo-sweep 4s ease-in-out infinite",
+              }}
+            >
+              <Crown size={8} style={{ filter: "drop-shadow(0 0 3px hsla(42,80%,55%,0.4))" }} />
+              Owner
+            </span>
+          </div>
         )}
 
         {/* Hover zone */}
         <div className="relative" ref={pickerRef} onMouseEnter={showPicker} onMouseLeave={hidePicker} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <EmojiPicker visible={pickerVisible} isOwn={isOwn} myReaction={msg.myReaction} onPick={handleReact} />
 
-          <div className="rounded-2xl px-3.5 py-2.5 relative" style={{ background: bubbleBg, border: `1px solid ${bubbleBorder}`, backdropFilter: "blur(16px)", boxShadow: isOwn ? "0 4px 20px hsla(315,80%,40%,0.25)" : "0 2px 12px hsla(330,30%,2%,0.5)" }}>
+          <div className="rounded-2xl px-3.5 py-2.5 relative" style={{ background: bubbleBg, border: `1px solid ${bubbleBorder}`, backdropFilter: "blur(16px)", boxShadow: isOwnerMsg ? "0 2px 16px hsla(42,60%,35%,0.15)" : isOwn ? "0 4px 20px hsla(315,80%,40%,0.25)" : "0 2px 12px hsla(330,30%,2%,0.5)" }}>
             {msg.pinned && (
               <div className="flex items-center gap-1 mb-1.5">
                 <Pin size={9} style={{ color: "hsl(315,90%,65%)" }} />
@@ -872,7 +905,7 @@ const ChatPage = () => {
     const t = text.trim();
     if (!t || !user) return;
 
-    const senderRole: SenderRole = isAdmin ? "admin" : "user";
+    const senderRole: SenderRole = isOwner ? "owner" : isAdmin ? "admin" : "user";
     const quotedId = replyTarget?.id || null;
 
     setText("");
@@ -1022,23 +1055,6 @@ const ChatPage = () => {
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
               Community Chat
             </p>
-            {isOwner && (
-              <span
-                className="text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1"
-                style={{
-                  background: "linear-gradient(135deg, hsla(42,60%,20%,0.5), hsla(36,50%,15%,0.5))",
-                  border: "1px solid hsla(42,70%,45%,0.35)",
-                  color: "hsl(42,75%,60%)",
-                  boxShadow: "0 0 12px hsla(42,70%,40%,0.15)",
-                  animation: "owner-holo-sweep 4s ease-in-out infinite",
-                  fontSize: 10,
-                  letterSpacing: "0.05em",
-                }}
-              >
-                <Crown size={10} style={{ filter: "drop-shadow(0 0 3px hsla(42,80%,55%,0.4))" }} />
-                OWNER
-              </span>
-            )}
             {isMuted && (
               <span className="text-xs px-1.5 py-0.5 rounded-md font-medium" style={{ background: "hsla(0,0%,50%,0.15)", color: "hsl(var(--muted-foreground))", fontSize: 10 }}>
                 Muted
