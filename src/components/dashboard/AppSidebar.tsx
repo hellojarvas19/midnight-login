@@ -45,14 +45,10 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
 
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { check(); return; }
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-        const res = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/owner-payments?action=list&status=pending`,
-          { headers: { Authorization: `Bearer ${session.access_token}` } }
-        );
-        setIsOwner(res.status !== 403);
+        const { data: ownerRole } = await supabase.rpc("has_role", { _user_id: user.id, _role: "owner" });
+        // Also check if primary owner
+        const { data: isPrimary } = await supabase.rpc("is_primary_owner", { _user_id: user.id });
+        setIsOwner(!!ownerRole || !!isPrimary);
       } catch {
         setIsOwner(false);
       }

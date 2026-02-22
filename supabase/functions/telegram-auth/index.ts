@@ -108,6 +108,20 @@ Deno.serve(async (req) => {
     });
 
     if (signInData?.session) {
+      // Check if user is banned
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("banned")
+        .eq("id", signInData.user.id)
+        .single();
+
+      if (profile?.banned) {
+        return new Response(
+          JSON.stringify({ error: "Your account has been banned. Contact support." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Update profile with latest Telegram data
       await supabase
         .from("profiles")

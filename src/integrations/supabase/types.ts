@@ -97,6 +97,42 @@ export type Database = {
           },
         ]
       }
+      owner_permissions: {
+        Row: {
+          can_approve_payments: boolean
+          can_ban_users: boolean
+          can_give_credits: boolean
+          can_manage_admins: boolean
+          created_at: string
+          granted_by: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_approve_payments?: boolean
+          can_ban_users?: boolean
+          can_give_credits?: boolean
+          can_manage_admins?: boolean
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_approve_payments?: boolean
+          can_ban_users?: boolean
+          can_give_credits?: boolean
+          can_manage_admins?: boolean
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount_usd: number
@@ -148,6 +184,9 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          banned: boolean
+          banned_at: string | null
+          banned_by: string | null
           created_at: string
           credits: number
           first_name: string | null
@@ -162,6 +201,9 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          banned?: boolean
+          banned_at?: string | null
+          banned_by?: string | null
           created_at?: string
           credits?: number
           first_name?: string | null
@@ -176,6 +218,9 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          banned?: boolean
+          banned_at?: string | null
+          banned_by?: string | null
           created_at?: string
           credits?: number
           first_name?: string | null
@@ -229,6 +274,10 @@ export type Database = {
         }
         Returns: Json
       }
+      has_owner_permission: {
+        Args: { _permission: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -236,6 +285,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_primary_owner: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "owner"

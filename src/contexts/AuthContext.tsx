@@ -15,6 +15,7 @@ interface Profile {
   referral_code: string;
   referred_by: string | null;
   created_at: string;
+  banned: boolean;
 }
 
 interface AuthContextType {
