@@ -179,8 +179,9 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!authUser) return;
-    supabase.rpc("has_role", { _user_id: authUser.id, _role: "admin" }).then(({ data }) => {
-      setIsAdmin(!!data);
+    supabase.rpc("has_role", { _user_id: authUser.id, _role: "admin" as any }).then(({ data, error }) => {
+      console.log("has_role admin check:", { data, error, userId: authUser.id });
+      if (!error) setIsAdmin(!!data);
     });
   }, [authUser]);
 
