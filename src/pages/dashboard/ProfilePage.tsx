@@ -33,7 +33,6 @@ import {
   Hash,
   Zap,
   ArrowDownLeft,
-  ArrowUpRight,
   Gift,
   Copy,
   Check,
@@ -63,32 +62,22 @@ const FALLBACK = {
   referralLink: "",
 };
 
-type TxType = "credit" | "debit" | "bonus";
+type PaymentStatus = "pending" | "approved" | "rejected";
 
-interface Transaction {
+interface PaymentRecord {
   id: string;
-  type: TxType;
-  amount: number;
-  description: string;
-  date: string;
-  balance: number;
+  plan: string;
+  amount_usd: number;
+  crypto_currency: string;
+  tx_hash: string | null;
+  status: string;
+  created_at: string;
 }
 
-const MOCK_TRANSACTIONS: Transaction[] = [
-  { id: "tx001", type: "credit", amount: 1000, description: "Top-up via Crypto",         date: "20 Feb 2026, 18:42", balance: 2480 },
-  { id: "tx002", type: "debit",  amount: -50,  description: "Mass Check · 50 cards",     date: "20 Feb 2026, 17:11", balance: 1480 },
-  { id: "tx003", type: "bonus",  amount: 30,   description: "Referral bonus · @user123", date: "19 Feb 2026, 09:00", balance: 1530 },
-  { id: "tx004", type: "debit",  amount: -120, description: "Mass Check · 120 cards",    date: "18 Feb 2026, 22:37", balance: 1500 },
-  { id: "tx005", type: "credit", amount: 500,  description: "Top-up via Crypto",         date: "17 Feb 2026, 14:05", balance: 1620 },
-  { id: "tx006", type: "debit",  amount: -10,  description: "Single Check",              date: "16 Feb 2026, 11:00", balance: 1120 },
-  { id: "tx007", type: "bonus",  amount: 100,  description: "Welcome bonus",             date: "15 Feb 2026, 08:30", balance: 1130 },
-  { id: "tx008", type: "credit", amount: 1000, description: "Initial top-up",            date: "15 Feb 2026, 08:00", balance: 1030 },
-];
-
-const TX_CONFIG: Record<TxType, { color: string; bg: string; Icon: typeof ArrowDownLeft }> = {
-  credit: { color: "hsl(142,70%,55%)",  bg: "hsla(142,60%,20%,0.25)", Icon: ArrowDownLeft  },
-  debit:  { color: "hsl(0,75%,60%)",    bg: "hsla(0,65%,20%,0.25)",   Icon: ArrowUpRight   },
-  bonus:  { color: "hsl(315,95%,65%)",  bg: "hsla(315,80%,30%,0.2)",  Icon: Gift           },
+const STATUS_CONFIG: Record<PaymentStatus, { label: string; color: string; bg: string; Icon: typeof Clock }> = {
+  pending:  { label: "Pending",  color: "hsl(44,100%,65%)",  bg: "hsla(44,80%,30%,0.25)",  Icon: Clock        },
+  approved: { label: "Approved", color: "hsl(142,70%,55%)",  bg: "hsla(142,60%,20%,0.25)", Icon: Check        },
+  rejected: { label: "Rejected", color: "hsl(0,75%,60%)",    bg: "hsla(0,65%,20%,0.25)",   Icon: Target       },
 };
 
 /* ─── Crown Sparkles ─── */
@@ -185,6 +174,8 @@ const ProfilePage = () => {
   const [loggedOut, setLoggedOut]         = useState(false);
   const [creditsBarWidth, setCreditsBarWidth] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
 
   useEffect(() => {
     if (!authUser) return;
@@ -193,7 +184,22 @@ const ProfilePage = () => {
     });
   }, [authUser]);
 
-  // Merge real profile with fallback
+  // Fetch payment history
+  useEffect(() => {
+    if (!authUser) return;
+    setPaymentsLoading(true);
+    supabase
+      .from("payments")
+      .select("id, plan, amount_usd, crypto_currency, tx_hash, status, created_at")
+      .eq("user_id", authUser.id)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        setPayments((data as PaymentRecord[]) || []);
+        setPaymentsLoading(false);
+      });
+  }, [authUser]);
+
   const displayName = profile?.first_name
     ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ""}`
     : profile?.username || FALLBACK.name;
@@ -752,7 +758,7 @@ const ProfilePage = () => {
         </p>
       </div>
 
-      {/* ── Transaction History ── */}
+      {/* ── Payment History ── */}
       <div
         className="glass-card animate-card-entrance rounded-2xl overflow-hidden"
         style={{ animationDelay: "140ms", animationFillMode: "both" }}
@@ -762,56 +768,85 @@ const ProfilePage = () => {
           style={{ borderColor: "hsla(315,30%,25%,0.2)" }}
         >
           <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
-            Transaction History
+            Payment History
           </h2>
         </div>
 
         <div className="flex flex-col divide-y" style={{ maxHeight: 380, overflowY: "auto" }}>
-          {MOCK_TRANSACTIONS.map((tx) => {
-            const cfg = TX_CONFIG[tx.type];
-            const TxIcon = cfg.Icon;
-            return (
-              <div
-                key={tx.id}
-                className="flex items-center gap-3 px-5 py-3.5 transition-colors"
-                style={{ borderColor: "hsla(315,20%,15%,0.4)" }}
-              >
-                {/* Type icon */}
-                <div
-                  className="shrink-0 rounded-xl p-2"
-                  style={{ background: cfg.bg, border: `1px solid ${cfg.color}33` }}
-                >
-                  <TxIcon size={14} style={{ color: cfg.color }} />
-                </div>
-
-                {/* Description + date */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "hsl(var(--foreground))" }}>
-                    {tx.description}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    {tx.date}
-                  </p>
-                </div>
-
-                {/* Amount + running balance */}
-                <div className="shrink-0 text-right">
-                  <p
-                    className="text-sm font-black"
-                    style={{
-                      color: cfg.color,
-                      fontFamily: "'Space Grotesk', sans-serif",
-                    }}
-                  >
-                    {tx.amount > 0 ? `+${tx.amount}` : tx.amount}
-                  </p>
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    bal: {tx.balance.toLocaleString()}
-                  </p>
+          {paymentsLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-5 py-4">
+                <div className="shrink-0 rounded-xl w-9 h-9" style={{ background: "hsla(315,30%,20%,0.3)", animation: `pulse 1.5s ease-in-out ${i * 0.15}s infinite` }} />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 rounded-full w-2/3" style={{ background: "hsla(315,30%,20%,0.3)", animation: `pulse 1.5s ease-in-out ${i * 0.15}s infinite` }} />
+                  <div className="h-2.5 rounded-full w-1/3" style={{ background: "hsla(315,30%,20%,0.2)", animation: `pulse 1.5s ease-in-out ${i * 0.15}s infinite` }} />
                 </div>
               </div>
-            );
-          })}
+            ))
+          ) : payments.length === 0 ? (
+            <div className="px-5 py-8 text-center">
+              <CreditCard size={24} style={{ color: "hsl(var(--muted-foreground))", opacity: 0.4, margin: "0 auto 8px" }} />
+              <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No payments yet</p>
+            </div>
+          ) : (
+            payments.map((p) => {
+              const status = (p.status as PaymentStatus) || "pending";
+              const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+              const StatusIcon = cfg.Icon;
+              const date = new Date(p.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 px-5 py-3.5 transition-colors"
+                  style={{ borderColor: "hsla(315,20%,15%,0.4)" }}
+                >
+                  {/* Status icon */}
+                  <div
+                    className="shrink-0 rounded-xl p-2"
+                    style={{ background: cfg.bg, border: `1px solid ${cfg.color}33` }}
+                  >
+                    <StatusIcon size={14} style={{ color: cfg.color }} />
+                  </div>
+
+                  {/* Plan + date + tx hash */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: "hsl(var(--foreground))" }}>
+                      {p.plan.charAt(0).toUpperCase() + p.plan.slice(1)} Plan · {p.crypto_currency}
+                    </p>
+                    <p className="text-xs mt-0.5 truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      {date}
+                      {p.tx_hash && (
+                        <span className="ml-1.5 font-mono opacity-60">
+                          TX: {p.tx_hash.slice(0, 10)}…
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Amount + status badge */}
+                  <div className="shrink-0 text-right flex flex-col items-end gap-1">
+                    <p
+                      className="text-sm font-black"
+                      style={{ color: "hsl(48,100%,68%)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      ${p.amount_usd}
+                    </p>
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5"
+                      style={{
+                        background: cfg.bg,
+                        color: cfg.color,
+                        border: `1px solid ${cfg.color}44`,
+                      }}
+                    >
+                      {cfg.label}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
       {/* ── Logout Button ── */}
