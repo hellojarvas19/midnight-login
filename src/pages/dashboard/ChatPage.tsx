@@ -388,9 +388,9 @@ const PinnedBanner = ({ message, onJump }: { message: ChatMessage; onJump: () =>
 
 /* ─── Message bubble ─── */
 const MessageBubble = ({
-  msg, isOwn, isAdmin, onPin, onUnpin, onReact, onReply, onScrollTo, onDelete, onEdit, pinnedRef, searchQuery = "",
+  msg, isOwn, isAdmin, isOwnerUser = false, onPin, onUnpin, onReact, onReply, onScrollTo, onDelete, onEdit, pinnedRef, searchQuery = "",
 }: {
-  msg: ChatMessage; isOwn: boolean; isAdmin: boolean;
+  msg: ChatMessage; isOwn: boolean; isAdmin: boolean; isOwnerUser?: boolean;
   onPin: (id: string) => void; onUnpin: (id: string) => void;
   onReact: (id: string, emoji: Emoji) => void; onReply: (msg: ChatMessage) => void;
   onScrollTo: (id: string) => void; onDelete: (id: string) => void;
@@ -428,29 +428,30 @@ const MessageBubble = ({
     setMenuOpen(false);
   };
 
-  const isOwnerMsg = msg.senderRole === "owner";
+  const isOwnerMsg = isOwnerUser || msg.senderRole === "owner";
   const bubbleBg = isOwnerMsg && isOwn ? "hsla(42,40%,12%,0.45)" : isOwn ? "hsla(315,80%,38%,0.35)" : isOwnerMsg ? "hsla(42,30%,8%,0.55)" : "hsla(330,18%,8%,0.75)";
   const bubbleBorder = isOwnerMsg ? "hsla(42,60%,40%,0.3)" : isOwn ? "hsla(315,60%,55%,0.30)" : "hsla(315,30%,25%,0.22)";
+  const effectiveRole = isOwnerMsg ? "owner" : msg.senderRole;
   const urls = msg.type === "text" ? extractUrls(msg.content) : [];
 
   return (
     <div ref={pinnedRef} className={`flex gap-2.5 ${isOwn ? "flex-row-reverse" : "flex-row"} items-end group`}>
       {/* Avatar with profile popover */}
       {!isOwn && (
-        <UserProfilePopover name={msg.sender} role={msg.senderRole} avatar={msg.senderAvatar}>
+        <UserProfilePopover name={msg.sender} role={effectiveRole} avatar={msg.senderAvatar}>
           <button
             className="rounded-full flex items-center justify-center shrink-0 text-xs font-bold cursor-pointer transition-transform hover:scale-105 overflow-hidden"
             style={{
               width: 30, height: 30,
-              background: msg.senderRole === "owner" ? "linear-gradient(135deg, hsl(42,70%,45%), hsl(36,60%,32%))" : msg.senderRole === "admin" ? "linear-gradient(135deg, hsl(42,100%,52%), hsl(36,90%,40%))" : "hsla(315,80%,40%,0.25)",
-              border: msg.senderRole === "owner" ? "1.5px solid hsla(42,70%,50%,0.5)" : msg.senderRole === "admin" ? "1px solid hsla(44,100%,58%,0.5)" : "1px solid hsla(315,50%,40%,0.3)",
-              color: (msg.senderRole === "owner" || msg.senderRole === "admin") ? "hsl(330,15%,5%)" : "hsl(var(--foreground))",
-              boxShadow: msg.senderRole === "owner" ? "0 0 12px hsla(42,70%,40%,0.3)" : msg.senderRole === "admin" ? "0 0 10px hsla(44,100%,55%,0.4)" : "none",
+              background: effectiveRole === "owner" ? "linear-gradient(135deg, hsl(42,70%,45%), hsl(36,60%,32%))" : effectiveRole === "admin" ? "linear-gradient(135deg, hsl(42,100%,52%), hsl(36,90%,40%))" : "hsla(315,80%,40%,0.25)",
+              border: effectiveRole === "owner" ? "1.5px solid hsla(42,70%,50%,0.5)" : effectiveRole === "admin" ? "1px solid hsla(44,100%,58%,0.5)" : "1px solid hsla(315,50%,40%,0.3)",
+              color: (effectiveRole === "owner" || effectiveRole === "admin") ? "hsl(330,15%,5%)" : "hsl(var(--foreground))",
+              boxShadow: effectiveRole === "owner" ? "0 0 12px hsla(42,70%,40%,0.3)" : effectiveRole === "admin" ? "0 0 10px hsla(44,100%,55%,0.4)" : "none",
             }}
           >
             {msg.senderAvatar ? (
               <img src={msg.senderAvatar} alt={msg.sender} className="w-full h-full object-cover" />
-            ) : (msg.senderRole === "admin" || msg.senderRole === "owner") ? <Crown size={12} /> : msg.sender[0].toUpperCase()}
+            ) : (effectiveRole === "admin" || effectiveRole === "owner") ? <Crown size={12} /> : msg.sender[0].toUpperCase()}
           </button>
         </UserProfilePopover>
       )}
@@ -460,12 +461,12 @@ const MessageBubble = ({
         {/* Sender name + badge */}
         {!isOwn ? (
           <div className="flex items-center gap-1.5 px-1">
-            <UserProfilePopover name={msg.sender} role={msg.senderRole} avatar={msg.senderAvatar}>
-              <button className="text-xs font-semibold cursor-pointer hover:underline" style={{ color: msg.senderRole === "owner" ? "hsl(42,75%,60%)" : msg.senderRole === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--muted-foreground))" }}>
-                {(msg.senderRole === "owner" || msg.senderRole === "admin") && "👑 "}{msg.sender}
+            <UserProfilePopover name={msg.sender} role={effectiveRole} avatar={msg.senderAvatar}>
+              <button className="text-xs font-semibold cursor-pointer hover:underline" style={{ color: effectiveRole === "owner" ? "hsl(42,75%,60%)" : effectiveRole === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--muted-foreground))" }}>
+                {(effectiveRole === "owner" || effectiveRole === "admin") && "👑 "}{msg.sender}
               </button>
             </UserProfilePopover>
-            {msg.senderRole === "owner" && (
+            {effectiveRole === "owner" && (
               <span
                 className="text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5 leading-none flex items-center gap-1"
                 style={{
@@ -480,7 +481,7 @@ const MessageBubble = ({
                 Owner
               </span>
             )}
-            {msg.senderRole === "admin" && (
+            {effectiveRole === "admin" && (
               <span
                 className="text-[9px] font-black uppercase tracking-wider rounded-full px-1.5 py-0.5 leading-none"
                 style={{
@@ -700,6 +701,7 @@ const ChatPage = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [ownerUserIds, setOwnerUserIds] = useState<Set<string>>(new Set());
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -739,6 +741,34 @@ const ChatPage = () => {
       setIsOwner(!!ownerRole || !!isPrimary);
     })();
   }, [user]);
+
+  /* ── Fetch all owner user IDs for badge display ── */
+  const senderIds = useMemo(() => {
+    const ids = new Set(messages.map((m) => m.senderId));
+    if (user) ids.add(user.id);
+    return Array.from(ids);
+  }, [messages.length, user]);
+
+  useEffect(() => {
+    if (senderIds.length === 0) return;
+    (async () => {
+      const ids = new Set<string>();
+      // Get users with owner role
+      const { data: ownerRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "owner");
+      (ownerRoles || []).forEach((r: any) => ids.add(r.user_id));
+
+      // Check remaining senders for primary owner
+      const remaining = senderIds.filter((id) => !ids.has(id));
+      const checks = await Promise.all(
+        remaining.map((id) => supabase.rpc("is_primary_owner", { _user_id: id }).then(({ data }) => ({ id, isPrimary: !!data })))
+      );
+      checks.forEach(({ id, isPrimary }) => { if (isPrimary) ids.add(id); });
+      setOwnerUserIds(ids);
+    })();
+  }, [senderIds.join(",")]);
 
   /* ── Load messages from DB ── */
   useEffect(() => {
@@ -1129,6 +1159,7 @@ const ChatPage = () => {
                   >
                     <MessageBubble
                       msg={msg} isOwn={msg.senderId === myId} isAdmin={isAdmin}
+                      isOwnerUser={ownerUserIds.has(msg.senderId)}
                       onPin={pinMessage} onUnpin={unpinMessage} onReact={reactToMessage}
                       onReply={setReplyTarget} onScrollTo={scrollToMessage}
                       onDelete={deleteMessage} onEdit={editMessage}
