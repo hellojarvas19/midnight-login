@@ -148,19 +148,37 @@ Deno.serve(async (req) => {
 
       if (updateErr) throw updateErr;
 
-      // If approved, activate the plan
+      // If approved, activate the plan or add credits
       if (decision === "approve") {
-        const planDurations: Record<string, number> = { basic: 7, standard: 15, pro: 30 };
-        const days = planDurations[payment.plan] || 7;
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + days);
+        if (payment.payment_type === "credits" && payment.credits_amount) {
+          // Credits purchase: add credits to profile
+          const { data: currentProfile } = await adminClient
+            .from("profiles")
+            .select("credits")
+            .eq("id", payment.user_id)
+            .single();
 
-        const { error: profileErr } = await adminClient
-          .from("profiles")
-          .update({ plan: payment.plan, plan_expires_at: expiresAt.toISOString() })
-          .eq("id", payment.user_id);
+          const newCredits = (currentProfile?.credits || 0) + payment.credits_amount;
+          const { error: creditsErr } = await adminClient
+            .from("profiles")
+            .update({ credits: newCredits })
+            .eq("id", payment.user_id);
 
-        if (profileErr) throw profileErr;
+          if (creditsErr) throw creditsErr;
+        } else {
+          // Plan purchase: activate the plan
+          const planDurations: Record<string, number> = { basic: 7, standard: 15, pro: 30 };
+          const days = planDurations[payment.plan] || 7;
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + days);
+
+          const { error: profileErr } = await adminClient
+            .from("profiles")
+            .update({ plan: payment.plan, plan_expires_at: expiresAt.toISOString() })
+            .eq("id", payment.user_id);
+
+          if (profileErr) throw profileErr;
+        }
       }
 
       // Notify user via Telegram about the decision

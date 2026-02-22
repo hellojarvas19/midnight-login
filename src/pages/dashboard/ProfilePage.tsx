@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import CreditsCheckoutPage from "./CreditsCheckoutPage";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 /* ─── Animated counter hook ─── */
@@ -176,6 +177,7 @@ const ProfilePage = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [showCreditsCheckout, setShowCreditsCheckout] = useState(false);
 
   useEffect(() => {
     if (!authUser) return;
@@ -250,6 +252,14 @@ const ProfilePage = () => {
       setTimeout(() => setCopiedRef(false), 2000);
     } catch {}
   };
+
+  if (showCreditsCheckout) {
+    return (
+      <div className="flex flex-col gap-6 w-full">
+        <CreditsCheckoutPage onBack={() => setShowCreditsCheckout(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -587,9 +597,24 @@ const ProfilePage = () => {
         className="glass-card animate-card-entrance rounded-2xl p-6"
         style={{ animationDelay: "80ms", animationFillMode: "both" }}
       >
-        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "hsl(var(--muted-foreground))" }}>
-          Credits Balance
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+            Credits Balance
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowCreditsCheckout(true)}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all"
+            style={{
+              background: "hsla(315,80%,40%,0.2)",
+              border: "1px solid hsla(315,70%,55%,0.35)",
+              color: "hsl(var(--primary))",
+            }}
+          >
+            <Zap size={11} />
+            Top Up
+          </button>
+        </div>
 
         <div className="flex items-end gap-3">
           <div

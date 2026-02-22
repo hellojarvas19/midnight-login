@@ -79,8 +79,10 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          credits_amount: number | null
           crypto_currency: string
           id: string
+          payment_type: string
           plan: string
           status: string
           tx_hash: string | null
@@ -92,8 +94,10 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          credits_amount?: number | null
           crypto_currency: string
           id?: string
+          payment_type?: string
           plan: string
           status?: string
           tx_hash?: string | null
@@ -105,8 +109,10 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          credits_amount?: number | null
           crypto_currency?: string
           id?: string
+          payment_type?: string
           plan?: string
           status?: string
           tx_hash?: string | null
