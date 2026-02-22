@@ -45,6 +45,33 @@ const PaymentPage = ({ selectedPlan, onBack, onSuccess }: PaymentPageProps) => {
         status: "pending",
       });
       if (error) throw error;
+
+      // Notify owners via Telegram
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+          await fetch(
+            `https://${projectId}.supabase.co/functions/v1/owner-payments?action=notify-submission`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                plan: selectedPlan,
+                amount_usd: plan.priceUsd,
+                crypto_currency: wallet.currency,
+                tx_hash: txHash.trim(),
+              }),
+            }
+          );
+        }
+      } catch {
+        // Notification failure shouldn't block the payment submission
+      }
+
       setSubmitted(true);
       toast({ title: "Payment submitted!", description: "Your payment is being reviewed. Plan will activate once confirmed." });
     } catch (err: any) {
