@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      check_jobs: {
+        Row: {
+          approved: number
+          charged: number
+          completed_at: string | null
+          created_at: string
+          declined: number
+          gateway: string
+          id: string
+          processed: number
+          proxies: string[]
+          sites: string[]
+          status: string
+          total_cards: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved?: number
+          charged?: number
+          completed_at?: string | null
+          created_at?: string
+          declined?: number
+          gateway?: string
+          id?: string
+          processed?: number
+          proxies?: string[]
+          sites?: string[]
+          status?: string
+          total_cards?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved?: number
+          charged?: number
+          completed_at?: string | null
+          created_at?: string
+          declined?: number
+          gateway?: string
+          id?: string
+          processed?: number
+          proxies?: string[]
+          sites?: string[]
+          status?: string
+          total_cards?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      check_results: {
+        Row: {
+          card_number: string
+          created_at: string
+          cvv: string
+          expiry: string
+          id: string
+          job_id: string
+          response_code: string | null
+          response_message: string | null
+          site_used: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          card_number: string
+          created_at?: string
+          cvv: string
+          expiry: string
+          id?: string
+          job_id: string
+          response_code?: string | null
+          response_message?: string | null
+          site_used?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          card_number?: string
+          created_at?: string
+          cvv?: string
+          expiry?: string
+          id?: string
+          job_id?: string
+          response_code?: string | null
+          response_message?: string | null
+          site_used?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "check_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_usage: {
         Row: {
           checks_used: number
