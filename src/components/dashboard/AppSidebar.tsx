@@ -237,15 +237,13 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
               </p>
             {isOwner && (
                 <span
-                  className="text-[9px] font-black uppercase tracking-widest rounded-full px-1.5 py-0.5"
+                  className="text-[9px] font-bold uppercase tracking-widest rounded-full px-1.5 py-0.5"
                   style={{
-                    background: "linear-gradient(135deg, hsla(44,90%,45%,0.25), hsla(36,80%,35%,0.2))",
-                    border: "1px solid hsla(44,100%,55%,0.45)",
-                    boxShadow: "0 0 10px hsla(44,100%,55%,0.3)",
-                    color: "hsl(48,100%,70%)",
+                    background: "hsla(42,60%,18%,0.5)",
+                    border: "1px solid hsla(42,70%,48%,0.3)",
+                    color: "hsl(42,65%,58%)",
                     lineHeight: 1,
                     whiteSpace: "nowrap",
-                    animation: "royal-badge-glow 2.5s ease-in-out infinite",
                   }}
                 >
                   👑 Owner

@@ -326,92 +326,42 @@ const ProfilePage = () => {
             </svg>
           </div>
 
-          {/* Royal gold aura — enhanced for owner */}
+          {/* Luxury gold aura */}
           <div
             style={{
               position: "absolute",
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              width: isOwner ? 150 : 110,
-              height: isOwner ? 150 : 110,
+              width: isOwner ? 130 : 110,
+              height: isOwner ? 130 : 110,
               borderRadius: "50%",
               background: "transparent",
               boxShadow: isOwner
-                ? "0 0 0 3px hsla(44,100%,55%,0.5), 0 0 0 6px hsla(36,90%,42%,0.3), 0 0 30px 10px hsla(44,100%,55%,0.25), 0 0 70px 20px hsla(42,90%,48%,0.12)"
+                ? "0 0 0 2px hsla(42,80%,50%,0.4), 0 0 24px 6px hsla(42,80%,48%,0.18), 0 0 60px 14px hsla(42,70%,40%,0.08)"
                 : "0 0 0 4px hsla(44,100%,58%,0.35), 0 0 22px 6px hsla(44,100%,55%,0.30), 0 0 50px 14px hsla(42,100%,50%,0.16)",
-              animation: isOwner ? "royal-aura-breathe 3s ease-in-out infinite" : "gold-aura-pulse 2.4s ease-in-out infinite",
+              animation: isOwner ? "royal-aura-breathe 3.5s ease-in-out infinite" : "gold-aura-pulse 2.4s ease-in-out infinite",
               zIndex: 0,
             }}
           />
 
-          {/* Owner-only: ornate filigree ring with jewels */}
+          {/* Owner-only subtle outer ring */}
           {isOwner && (
-            <>
-              {/* Outer decorative ring */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 170,
-                  height: 170,
-                  borderRadius: "50%",
-                  zIndex: 0,
-                }}
-              >
-                <svg width="170" height="170" viewBox="0 0 170 170" style={{ position: "absolute", top: 0, left: 0, animation: "royal-ring-rotate 20s linear infinite" }}>
-                  {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
-                    <g key={angle} transform={`rotate(${angle} 85 85)`}>
-                      <path d="M 85 8 Q 95 20 85 32 Q 75 20 85 8" fill="none" stroke="hsla(44,100%,60%,0.5)" strokeWidth="1.2" />
-                      <circle cx="85" cy="6" r="2.5"
-                        fill={angle % 90 === 0 ? "hsl(0,75%,55%)" : "hsl(200,85%,60%)"}
-                        style={{ filter: `drop-shadow(0 0 4px ${angle % 90 === 0 ? "hsla(0,75%,55%,0.8)" : "hsla(200,85%,60%,0.8)"})` }}
-                      />
-                    </g>
-                  ))}
-                  <circle cx="85" cy="85" r="76" fill="none" stroke="hsla(44,90%,55%,0.2)" strokeWidth="0.8" strokeDasharray="6 8" />
-                  <circle cx="85" cy="85" r="82" fill="none" stroke="hsla(44,90%,55%,0.12)" strokeWidth="0.5" />
-                </svg>
-              </div>
-
-              {/* Inner velvet glow */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 120,
-                  height: 120,
-                  borderRadius: "50%",
-                  background: "radial-gradient(circle, transparent 40%, hsla(0,60%,25%,0.15) 70%, transparent 100%)",
-                  boxShadow: "inset 0 0 20px 8px hsla(0,50%,20%,0.2)",
-                  zIndex: 0,
-                }}
-              />
-
-              {/* Floating royal particles */}
-              {[0,1,2,3,4,5,6,7].map((i) => (
-                <div
-                  key={`rp-${i}`}
-                  style={{
-                    position: "absolute",
-                    top: `${20 + (i * 8) % 60}%`,
-                    left: `${10 + (i * 13) % 80}%`,
-                    width: 3 + (i % 3),
-                    height: 3 + (i % 3),
-                    borderRadius: i % 2 === 0 ? "50%" : "1px",
-                    transform: i % 2 !== 0 ? "rotate(45deg)" : undefined,
-                    background: i % 3 === 0 ? "hsl(44,100%,65%)" : i % 3 === 1 ? "hsl(0,75%,60%)" : "hsl(200,85%,65%)",
-                    animation: `royal-gem-float ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite`,
-                    filter: `drop-shadow(0 0 3px hsla(44,100%,65%,0.8))`,
-                    zIndex: 0,
-                  }}
-                />
-              ))}
-            </>
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: 148,
+                height: 148,
+                borderRadius: "50%",
+                border: "1px solid hsla(42,70%,50%,0.15)",
+                boxShadow: "0 0 20px 4px hsla(42,60%,45%,0.06)",
+                animation: "royal-aura-breathe 3.5s ease-in-out infinite 0.5s",
+                zIndex: 0,
+              }}
+            />
           )}
 
           {/* Non-owner second ring */}
@@ -443,14 +393,12 @@ const ProfilePage = () => {
               borderRadius: "50%",
               padding: 3,
               background: isOwner
-                ? "conic-gradient(from 0deg, hsl(44,100%,60%), hsl(36,90%,42%), hsl(48,100%,72%), hsl(42,100%,52%), hsl(0,70%,50%), hsl(44,100%,60%))"
+                ? "linear-gradient(135deg, hsl(42,80%,55%) 0%, hsl(36,70%,40%) 40%, hsl(44,85%,58%) 60%, hsl(38,75%,42%) 100%)"
                 : "linear-gradient(135deg, hsl(48,100%,72%) 0%, hsl(42,100%,52%) 35%, hsl(52,100%,78%) 55%, hsl(36,90%,40%) 80%, hsl(48,100%,68%) 100%)",
               boxShadow: isOwner
-                ? "0 0 18px 5px hsla(44,100%,55%,0.65), 0 0 40px 10px hsla(42,90%,50%,0.3), inset 0 0 6px hsla(44,100%,70%,0.3)"
+                ? "0 0 14px 4px hsla(42,80%,50%,0.5), 0 0 30px 8px hsla(42,70%,45%,0.2)"
                 : "0 0 12px 3px hsla(44,100%,56%,0.55), 0 0 28px 6px hsla(44,100%,52%,0.28)",
-              animation: isOwner
-                ? "royal-ring-spin 8s linear infinite, avatar-ring-breathe 2.8s ease-in-out infinite"
-                : "avatar-ring-breathe 2.8s ease-in-out infinite",
+              animation: "avatar-ring-breathe 2.8s ease-in-out infinite",
             }}
           >
             <div className="rounded-full overflow-hidden w-full h-full">
@@ -483,10 +431,10 @@ const ProfilePage = () => {
           <div
             className="absolute -bottom-1 -right-1 rounded-full p-1"
             style={{
-              background: isOwner ? "linear-gradient(135deg, hsl(44,100%,55%), hsl(36,90%,42%))" : "hsl(315,95%,45%)",
-              border: isOwner ? "2px solid hsl(36,90%,38%)" : "2px solid hsl(var(--background))",
+              background: isOwner ? "linear-gradient(135deg, hsl(42,75%,50%), hsl(36,65%,38%))" : "hsl(315,95%,45%)",
+              border: isOwner ? "2px solid hsl(330,15%,5%)" : "2px solid hsl(var(--background))",
               boxShadow: isOwner
-                ? "0 0 12px hsla(44,100%,55%,0.7), 0 0 24px hsla(42,90%,50%,0.3)"
+                ? "0 0 8px hsla(42,80%,50%,0.5)"
                 : "0 0 8px hsla(315,90%,55%,0.5)",
             }}
           >
@@ -506,14 +454,14 @@ const ProfilePage = () => {
               fontFamily: "'Space Grotesk', sans-serif",
               letterSpacing: "-0.02em",
               background: isOwner
-                ? "linear-gradient(90deg, hsl(44,100%,55%) 0%, hsl(48,100%,72%) 20%, hsl(52,100%,80%) 40%, hsl(44,100%,60%) 60%, hsl(36,90%,45%) 80%, hsl(44,100%,55%) 100%)"
+                ? "linear-gradient(90deg, hsl(42,75%,50%) 0%, hsl(48,85%,65%) 30%, hsl(44,80%,58%) 50%, hsl(36,70%,42%) 70%, hsl(42,75%,50%) 100%)"
                 : "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
-              backgroundSize: isOwner ? "300% auto" : "200% auto",
+              backgroundSize: "200% auto",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
-              animation: isOwner ? "royal-name-shimmer 3.5s linear infinite" : "gold-shimmer 2.8s linear infinite",
-              filter: isOwner ? "drop-shadow(0 0 14px hsla(44,100%,55%,0.7))" : "drop-shadow(0 0 10px hsla(44,100%,58%,0.55))",
+              animation: "gold-shimmer 2.8s linear infinite",
+              filter: isOwner ? "drop-shadow(0 0 10px hsla(42,75%,50%,0.5))" : "drop-shadow(0 0 10px hsla(44,100%,58%,0.55))",
             }}
           >
             {user.name}
@@ -529,32 +477,25 @@ const ProfilePage = () => {
             <div
               className="flex items-center gap-2 rounded-full px-4 py-1.5 relative overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, hsla(44,90%,45%,0.3), hsla(36,80%,35%,0.25), hsla(48,90%,50%,0.2))",
-                border: "1px solid hsla(44,100%,55%,0.5)",
-                boxShadow: "0 0 16px hsla(44,100%,55%,0.3), 0 0 36px hsla(42,90%,50%,0.12), inset 0 0 10px hsla(44,90%,55%,0.08)",
-                animation: "royal-badge-glow 2.5s ease-in-out infinite",
+                background: "hsla(42,60%,18%,0.5)",
+                border: "1px solid hsla(42,70%,48%,0.35)",
+                boxShadow: "0 0 12px hsla(42,70%,45%,0.15)",
               }}
             >
-              {/* Gold sweep */}
+              {/* Subtle gold sweep */}
               <div
                 style={{
                   position: "absolute",
                   inset: 0,
-                  background: "linear-gradient(105deg, transparent 30%, hsla(44,100%,80%,0.18) 45%, hsla(48,100%,70%,0.12) 50%, transparent 65%)",
-                  animation: "owner-holo-sweep 3.5s linear infinite",
+                  background: "linear-gradient(105deg, transparent 35%, hsla(42,80%,65%,0.1) 48%, transparent 60%)",
+                  animation: "owner-holo-sweep 4s linear infinite",
                 }}
               />
-              <span style={{ fontSize: 15, zIndex: 1, filter: "drop-shadow(0 0 4px hsla(44,100%,55%,0.6))" }}>👑</span>
+              <span style={{ fontSize: 14, zIndex: 1 }}>👑</span>
               <span
-                className="text-xs font-black uppercase tracking-widest relative z-10"
+                className="text-xs font-bold uppercase tracking-widest relative z-10"
                 style={{
-                  background: "linear-gradient(90deg, hsl(44,100%,55%), hsl(48,100%,72%), hsl(52,100%,80%), hsl(44,100%,58%))",
-                  backgroundSize: "300% auto",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  animation: "royal-name-shimmer 3s linear infinite",
-                  filter: "drop-shadow(0 0 4px hsla(44,100%,55%,0.5))",
+                  color: "hsl(42,70%,60%)",
                   letterSpacing: "0.15em",
                 }}
               >
