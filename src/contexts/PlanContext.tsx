@@ -20,7 +20,7 @@ export const PLAN_DETAILS: Record<PlanId, PlanDetails> = {
     price: "$10",
     priceUsd: 10,
     duration: 7,
-    features: ["50 checks/day", "1 gateway", "Basic support", "Community chat"],
+    features: ["500 checks/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
   },
   standard: {
     id: "standard",
@@ -28,7 +28,7 @@ export const PLAN_DETAILS: Record<PlanId, PlanDetails> = {
     price: "$20",
     priceUsd: 20,
     duration: 15,
-    features: ["200 checks/day", "3 gateways", "Priority support", "Mass checker", "Community chat"],
+    features: ["500 checks/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
   },
   pro: {
     id: "pro",
@@ -36,7 +36,7 @@ export const PLAN_DETAILS: Record<PlanId, PlanDetails> = {
     price: "$40",
     priceUsd: 40,
     duration: 30,
-    features: ["Unlimited checks", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access"],
+    features: ["500 checks/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
   },
 };
 
