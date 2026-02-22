@@ -474,7 +474,6 @@ const MessageBubble = ({
                   border: "1px solid hsla(42,70%,45%,0.35)",
                   color: "hsl(42,75%,60%)",
                   boxShadow: "0 0 10px hsla(42,70%,40%,0.15)",
-                  animation: "owner-holo-sweep 4s ease-in-out infinite",
                 }}
               >
                 <Crown size={8} style={{ filter: "drop-shadow(0 0 3px hsla(42,80%,55%,0.4))" }} />
