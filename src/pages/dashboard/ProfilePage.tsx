@@ -420,49 +420,8 @@ const ProfilePage = () => {
           </p>
         </div>
 
-        {/* Plan + Admin badges */}
+        {/* Plan badge */}
         <div className="flex flex-col items-center gap-2">
-          {isAdmin && (
-             <div
-              className="flex items-center justify-center gap-2 rounded-full px-6 py-1.5 whitespace-nowrap self-center mx-auto"
-              style={{
-                background: "hsla(44,100%,50%,0.15)",
-                border: "1px solid hsla(44,100%,58%,0.4)",
-                boxShadow: "0 0 12px hsla(44,100%,55%,0.25), 0 0 24px hsla(44,100%,55%,0.12)",
-                animation: "gold-aura-pulse 2.4s ease-in-out infinite",
-                width: "fit-content",
-              }}
-            >
-              <svg width="16" height="12" viewBox="0 0 48 36" fill="none" style={{ flexShrink: 0 }}>
-                <path d="M4 30 L4 22 L12 8 L24 18 L36 8 L44 22 L44 30 Z" fill="url(#adminCrownGrad)" stroke="hsl(45,100%,75%)" strokeWidth="1.2" strokeLinejoin="round"/>
-                <rect x="4" y="27" width="40" height="5" rx="2" fill="url(#adminBandGrad)" stroke="hsl(45,100%,75%)" strokeWidth="0.8"/>
-                <circle cx="24" cy="24" r="3" fill="hsl(315,95%,65%)"/>
-                <defs>
-                  <linearGradient id="adminCrownGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(48,100%,72%)"/>
-                    <stop offset="100%" stopColor="hsl(36,90%,38%)"/>
-                  </linearGradient>
-                  <linearGradient id="adminBandGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(44,100%,58%)"/>
-                    <stop offset="100%" stopColor="hsl(36,90%,40%)"/>
-                  </linearGradient>
-                </defs>
-              </svg>
-              <span
-                className="text-sm font-black uppercase tracking-widest"
-                style={{
-                  background: "linear-gradient(90deg, hsl(42,100%,52%), hsl(52,100%,78%), hsl(42,100%,52%))",
-                  backgroundSize: "200% auto",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  animation: "gold-shimmer 2.8s linear infinite",
-                }}
-              >
-                ADMIN
-              </span>
-            </div>
-          )}
           <div
             className="flex items-center gap-1.5 rounded-full px-3 py-1"
             style={{
