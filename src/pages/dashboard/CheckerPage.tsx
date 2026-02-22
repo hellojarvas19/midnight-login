@@ -7,6 +7,7 @@ import {
   Upload, Play, Loader2, CheckCircle2, XCircle, CreditCard,
   Trash2, FileText, ClipboardList, Copy, Download, Check,
   Shield, ShieldCheck, ShieldOff, Plus, X, Zap, Settings2,
+  Globe,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -19,6 +20,8 @@ type CardResult = {
   cvv: string;
   luhnValid: boolean;
   status: "pending" | "checking" | "charged" | "approved" | "declined";
+  responseCode?: string;
+  responseMessage?: string;
 };
 
 /** Luhn algorithm — returns true if the card number passes the check */
@@ -54,13 +57,6 @@ const maskCard = (card: string) => {
   const d = card.replace(/\s/g, "");
   if (d.length < 4) return card;
   return `•••• •••• •••• ${d.slice(-4)}`;
-};
-
-const simulateResult = (card: string, gateway: string): CardResult["status"] => {
-  const digits = card.replace(/\D/g, "");
-  const last = parseInt(digits[digits.length - 1] || "0", 10);
-  if (gateway === "stripe-charge") return "charged";
-  return last % 2 === 0 ? "approved" : "declined";
 };
 
 const STATUS_CONFIG = {
@@ -194,13 +190,22 @@ const CheckerPage = () => {
   const proxyIndexRef = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<boolean>(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
 
-  // Round-robin proxy getter
-  const nextProxy = () => {
-    if (!proxyEnabled || proxies.length === 0) return null;
-    const p = proxies[proxyIndexRef.current % proxies.length];
-    proxyIndexRef.current += 1;
-    return p;
+  // ── Sites input ──
+  const [sitesOpen, setSitesOpen] = useState(false);
+  const [sitesInput, setSitesInput] = useState("");
+  const [sites, setSites] = useState<string[]>([]);
+
+  const addSites = () => {
+    const lines = sitesInput.split("\n").map((l) => l.trim()).filter((l) => l.length > 0 && l.startsWith("http"));
+    if (lines.length === 0) return;
+    setSites((prev) => Array.from(new Set([...prev, ...lines])));
+    setSitesInput("");
+  };
+
+  const removeSite = (idx: number) => {
+    setSites((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const addProxies = () => {
@@ -236,7 +241,7 @@ const CheckerPage = () => {
 
   const buildExportText = (subset: CardResult[]) =>
     subset
-      .map((c) => `${c.card}|${c.expiry}|${c.cvv}|${c.status.toUpperCase()}`)
+      .map((c) => `${c.card}|${c.expiry}|${c.cvv}|${c.status.toUpperCase()}${c.responseCode ? `|${c.responseCode}` : ""}`)
       .join("\n");
 
   const handleCopyResults = async () => {
@@ -310,6 +315,57 @@ const CheckerPage = () => {
     setCards(parseLines(text));
   };
 
+  // ── Realtime subscription for job updates ──
+  useEffect(() => {
+    if (!currentJobId) return;
+
+    const jobChannel = supabase
+      .channel(`job-${currentJobId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "check_jobs", filter: `id=eq.${currentJobId}` },
+        (payload) => {
+          const job = payload.new as any;
+          if (job.status === "completed" || job.status === "failed" || job.status === "stopped") {
+            setIsRunning(false);
+            refreshProfile();
+            const hits = (job.charged || 0) + (job.approved || 0);
+            toast({
+              title: hits > 0 ? "✅ Check Complete" : "❌ Check Complete",
+              description: `${job.processed} processed · ${hits > 0
+                ? `${job.approved} approved, ${job.charged} charged · ${job.declined} declined`
+                : `All ${job.declined} declined`}`,
+              variant: hits > 0 ? "default" : "destructive",
+              duration: 5000,
+            });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "check_results", filter: `job_id=eq.${currentJobId}` },
+        (payload) => {
+          const result = payload.new as any;
+          setCards((prev) =>
+            prev.map((c) => {
+              if (c.card === result.card_number && c.expiry === result.expiry && c.cvv === result.cvv) {
+                return {
+                  ...c,
+                  status: result.status as CardResult["status"],
+                  responseCode: result.response_code || undefined,
+                  responseMessage: result.response_message || undefined,
+                };
+              }
+              return c;
+            })
+          );
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(jobChannel); };
+  }, [currentJobId]);
+
   const handleRun = async () => {
     if (!isPlanActive || !activePlan) {
       toast({ title: "No active plan", description: "You need an active plan to use the checker.", variant: "destructive" });
@@ -319,79 +375,102 @@ const CheckerPage = () => {
     const validCards = cards.filter((c) => c.luhnValid);
     if (!gateway || validCards.length === 0) return;
 
-    // Pre-check daily limit from local state
-    if (dailyRemaining === 0) {
-      toast({ title: "Daily limit reached", description: `You've used all ${activePlan.dailyLimit.toLocaleString()} credits for today. Resets at midnight.`, variant: "destructive" });
+    // Enforce proxy requirement
+    if (!proxyEnabled || proxies.length === 0) {
+      toast({ title: "Proxies Required", description: "You must add and enable proxies before running the checker.", variant: "destructive" });
       return;
     }
 
-    // Cap cards to remaining daily limit
+    // Enforce sites requirement for shopify gateway
+    if (gateway === "shopify" && sites.length === 0) {
+      toast({ title: "Sites Required", description: "You must add at least one Shopify site URL.", variant: "destructive" });
+      return;
+    }
+
+    // Pre-check daily limit
+    if (dailyRemaining === 0) {
+      toast({ title: "Daily limit reached", description: `You've used all ${activePlan.dailyLimit.toLocaleString()} credits for today.`, variant: "destructive" });
+      return;
+    }
+
     const cardsToCheck = Math.min(validCards.length, dailyRemaining);
     if (cardsToCheck < validCards.length) {
       toast({ title: "Partial check", description: `Only ${cardsToCheck.toLocaleString()} of ${validCards.length.toLocaleString()} cards will be checked (daily limit).` });
     }
 
+    // Atomically deduct credits
+    if (authUser) {
+      const { data } = await supabase.rpc("deduct_credits_atomic", {
+        p_user_id: authUser.id,
+        p_checks_requested: cardsToCheck,
+        p_daily_limit: activePlan.dailyLimit,
+      });
+      const result = data as unknown as { success?: boolean; checks_allowed?: number; daily_used?: number; error?: string } | null;
+      if (!result?.success) {
+        toast({ title: "Credit check failed", description: result?.error || "Could not deduct credits.", variant: "destructive" });
+        return;
+      }
+      setDailyUsed(result.daily_used ?? dailyUsed + cardsToCheck);
+    }
+
     abortRef.current = false;
     setIsRunning(true);
 
-    const updated: CardResult[] = cards.map((c) => ({ ...c, status: "pending" as CardResult["status"] }));
-    setCards([...updated]);
+    // Reset card statuses
+    const updated = cards.map((c) => ({ ...c, status: "pending" as CardResult["status"], responseCode: undefined, responseMessage: undefined }));
+    setCards(updated);
 
-    let checkedCount = 0;
-    for (let i = 0; i < updated.length; i++) {
-      if (abortRef.current) break;
-      if (!updated[i].luhnValid) continue;
-      if (checkedCount >= cardsToCheck) break;
+    // Create job in DB
+    const cardsPayload = validCards.slice(0, cardsToCheck).map((c) => ({ card: c.card, expiry: c.expiry, cvv: c.cvv }));
 
-      const _proxy = nextProxy(); void _proxy;
-      updated[i] = { ...updated[i], status: "checking" as CardResult["status"] };
-      setCards([...updated]);
+    const { data: jobData, error: jobErr } = await supabase
+      .from("check_jobs")
+      .insert({
+        user_id: authUser!.id,
+        gateway,
+        total_cards: cardsToCheck,
+        sites,
+        proxies,
+      })
+      .select("id")
+      .single();
 
-      await new Promise((r) => setTimeout(r, 600 + Math.random() * 600));
-
-      if (abortRef.current) break;
-      updated[i] = {
-        ...updated[i],
-        status: simulateResult(updated[i].card, gateway) as CardResult["status"],
-      };
-      setCards([...updated]);
-      checkedCount++;
+    if (jobErr || !jobData) {
+      toast({ title: "Error", description: "Failed to create check job.", variant: "destructive" });
+      setIsRunning(false);
+      return;
     }
 
-    // Atomically deduct credits and track daily usage via DB function
-    if (checkedCount > 0 && authUser) {
-      const { data } = await supabase.rpc("deduct_credits_atomic", {
-        p_user_id: authUser.id,
-        p_checks_requested: checkedCount,
-        p_daily_limit: activePlan.dailyLimit,
-      });
-      const result = data as unknown as { daily_used?: number } | null;
-      if (result) {
-        setDailyUsed(result.daily_used ?? dailyUsed + checkedCount);
-      }
-      refreshProfile();
-    }
+    const jobId = jobData.id;
+    setCurrentJobId(jobId);
 
-    setIsRunning(false);
+    // Insert card results
+    const resultRows = cardsPayload.map((c) => ({
+      job_id: jobId,
+      user_id: authUser!.id,
+      card_number: c.card,
+      expiry: c.expiry,
+      cvv: c.cvv,
+      status: "pending",
+    }));
 
-    // ── Completion toast ──
-    if (!abortRef.current) {
-      const approved = updated.filter((c) => c.status === "approved").length;
-      const charged  = updated.filter((c) => c.status === "charged").length;
-      const declined = updated.filter((c) => c.status === "declined").length;
-      const hits     = approved + charged;
-      toast({
-        title: hits > 0 ? "✅ Check Complete" : "❌ Check Complete",
-        description: `${checkedCount} credits used · ${hits > 0
-          ? `${hits} approved${charged > 0 ? ` (${charged} charged)` : ""} · ${declined} declined`
-          : `All ${declined} card${declined !== 1 ? "s" : ""} declined`}`,
-        variant: hits > 0 ? "default" : "destructive",
-        duration: 5000,
-      });
+    await supabase.from("check_results").insert(resultRows);
+
+    // Call edge function
+    const { error: fnErr } = await supabase.functions.invoke("checker-run", {
+      body: { job_id: jobId, cards: cardsPayload, sites, proxies },
+    });
+
+    if (fnErr) {
+      console.error("Edge function error:", fnErr);
+      // Job is still running on backend, don't stop
     }
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
+    if (currentJobId) {
+      await supabase.from("check_jobs").update({ status: "stopped" }).eq("id", currentJobId);
+    }
     abortRef.current = true;
     setIsRunning(false);
   };
@@ -399,6 +478,7 @@ const CheckerPage = () => {
   const handleClear = () => {
     setCards([]);
     setPasteText("");
+    setCurrentJobId(null);
   };
 
   const invalidCount = cards.filter((c) => !c.luhnValid).length;
@@ -456,7 +536,7 @@ const CheckerPage = () => {
           />
         </h1>
         <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-          Paste a card list or upload a file, select a gateway, then run.
+          Paste a card list or upload a file, select a gateway, add sites & proxies, then run.
         </p>
 
         {/* Daily credits bar */}
@@ -532,9 +612,7 @@ const CheckerPage = () => {
                 }}
               >
                 {[
-                  { value: "stripe-charge", emoji: "💳", anim: "emoji-bounce 1.4s ease-in-out infinite", label: "Stripe Charge" },
-                  { value: "stripe-auth",   emoji: "🔐", anim: "emoji-spin 2.5s linear infinite",       label: "Stripe Auth"   },
-                  { value: "shopify",       emoji: "🛍️", anim: "emoji-wobble 1.8s ease-in-out infinite", label: "Shopify"       },
+                  { value: "shopify", emoji: "🛍️", anim: "emoji-wobble 1.8s ease-in-out infinite", label: "Shopify" },
                 ].map((g) => (
                   <SelectItem key={g.value} value={g.value} style={{ color: "hsl(var(--foreground))" }}>
                     <span className="flex items-center gap-2">
@@ -547,11 +625,105 @@ const CheckerPage = () => {
             </Select>
           </div>
 
+          {/* ── Sites section ── */}
+          {gateway === "shopify" && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <span className="flex items-center gap-1.5">
+                    <Globe size={11} style={{ color: "hsl(var(--primary))" }} />
+                    Shopify Sites
+                  </span>
+                  {sites.length > 0 && (
+                    <span className="ml-2 normal-case font-normal" style={{ color: "hsl(142,70%,55%)", opacity: 0.8 }}>
+                      {sites.length} loaded · rotates every 10 cards
+                    </span>
+                  )}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setSitesOpen((o) => !o)}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-300 hover:scale-105 active:scale-95"
+                  style={{
+                    background: sitesOpen ? "hsla(315,40%,15%,0.7)" : "hsla(315,30%,12%,0.6)",
+                    color: sitesOpen ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                    border: sitesOpen ? "1px solid hsla(315,70%,55%,0.35)" : "1px solid hsla(315,25%,30%,0.2)",
+                    boxShadow: sitesOpen ? "0 0 10px hsla(315,80%,50%,0.2)" : "none",
+                  }}
+                >
+                  {sitesOpen ? <><X size={12} /> Close</> : <><Plus size={12} /> Add</>}
+                </button>
+              </div>
+
+              {/* Sites input */}
+              <div style={{ maxHeight: sitesOpen ? "320px" : "0px", opacity: sitesOpen ? 1 : 0, overflow: "hidden", transition: "max-height 0.38s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease" }}>
+                <div className="flex flex-col gap-2 pt-1">
+                  <textarea
+                    value={sitesInput}
+                    onChange={(e) => setSitesInput(e.target.value)}
+                    placeholder={"https://store1.com\nhttps://store2.com\nhttps://store3.myshopify.com"}
+                    rows={4}
+                    className="glass-input rounded-xl px-4 py-3 text-sm font-mono w-full resize-none"
+                    style={{ color: "hsl(var(--foreground))", lineHeight: 1.7 }}
+                  />
+                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.65 }}>
+                    One Shopify site URL per line · rotates every 10 cards
+                  </p>
+                  <button
+                    type="button"
+                    disabled={!sitesInput.trim()}
+                    onClick={addSites}
+                    className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(315,95%,40%), hsl(315,85%,50%))",
+                      color: "hsl(var(--primary-foreground))",
+                      border: "1px solid hsla(315,80%,60%,0.3)",
+                      boxShadow: sitesInput.trim() ? "0 2px 14px hsla(315,90%,50%,0.35)" : "none",
+                    }}
+                  >
+                    <Plus size={12} /> Add {sitesInput.trim().split("\n").filter((l) => l.trim()).length || ""} Site{sitesInput.trim().split("\n").filter((l) => l.trim()).length === 1 ? "" : "s"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Sites list */}
+              {sites.length > 0 && !sitesOpen && (
+                <div
+                  className="rounded-xl overflow-hidden"
+                  style={{
+                    border: "1px solid hsla(315,50%,40%,0.3)",
+                    background: "hsla(315,40%,10%,0.2)",
+                    boxShadow: "0 0 16px hsla(315,55%,25%,0.12)",
+                  }}
+                >
+                  <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "hsla(315,25%,25%,0.15)" }}>
+                    <Globe size={12} style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 4px hsla(315,70%,50%,0.5))" }} />
+                    <span className="text-xs font-semibold" style={{ color: "hsl(var(--primary))" }}>
+                      Rotating {sites.length} site{sites.length === 1 ? "" : "s"} (every 10 cards)
+                    </span>
+                    <button type="button" onClick={() => setSites([])} className="ml-auto text-xs transition-opacity hover:opacity-70" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      Clear all
+                    </button>
+                  </div>
+                  <div style={{ maxHeight: 120, overflowY: "auto" }}>
+                    {sites.map((s, i) => (
+                      <div key={i} className="flex items-center gap-2 px-3 py-1.5 border-b last:border-0" style={{ borderColor: "hsla(315,20%,20%,0.12)" }}>
+                        <span className="text-xs font-mono shrink-0 w-5 text-right" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.5 }}>{i + 1}</span>
+                        <span className="text-xs font-mono flex-1 truncate" style={{ color: "hsl(var(--foreground))", opacity: 0.85 }}>{s}</span>
+                        <button type="button" onClick={() => removeSite(i)} className="shrink-0 transition-opacity hover:opacity-70" style={{ color: "hsl(var(--muted-foreground))" }}><X size={11} /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Proxy section ── */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
-                Proxies
+                Proxies <span className="text-[9px] font-bold px-1.5 py-0.5 rounded ml-1.5" style={{ background: "hsla(0,65%,30%,0.4)", color: "hsl(0,75%,65%)", border: "1px solid hsla(0,65%,50%,0.3)" }}>REQUIRED</span>
                 {proxies.length > 0 && (
                   <span className="ml-2 normal-case font-normal" style={{ color: proxyEnabled ? "hsl(142,70%,55%)" : "hsl(var(--muted-foreground))", opacity: 0.8 }}>
                     {proxies.length} loaded
@@ -813,7 +985,7 @@ const CheckerPage = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "hsl(var(--primary))" }} />
                   <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "hsl(var(--primary))" }} />
                 </span>
-                <span className="text-xs font-medium" style={{ color: "hsl(var(--primary))" }}>Running</span>
+                <span className="text-xs font-medium" style={{ color: "hsl(var(--primary))" }}>Running on backend</span>
               </span>
             )}
           </div>
@@ -960,11 +1132,10 @@ const CheckerPage = () => {
                     <p className="text-sm font-mono font-medium truncate" style={{ color: isInvalid ? "hsl(0,75%,65%)" : "hsl(var(--foreground))" }}>
                       {maskCard(c.card)}
                     </p>
-                    {c.expiry && (
-                      <p className="text-xs font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
-                        {c.expiry} · {c.cvv ? "CVV ✓" : "No CVV"}
-                      </p>
-                    )}
+                    <p className="text-xs font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      {c.expiry && <>{c.expiry} · {c.cvv ? "CVV ✓" : "No CVV"}</>}
+                      {c.responseCode && <> · <span style={{ color: c.status === "declined" ? "hsl(0,75%,65%)" : c.status === "charged" ? "hsl(315,95%,70%)" : "hsl(142,70%,55%)" }}>{c.responseCode}</span></>}
+                    </p>
                   </div>
 
                   {/* Status badge */}
