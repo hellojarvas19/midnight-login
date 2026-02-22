@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.owner-manage]
 verify_jwt = false
+
+[functions.checker-run]
+verify_jwt = false
