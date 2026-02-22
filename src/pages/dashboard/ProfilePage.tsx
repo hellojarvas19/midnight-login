@@ -420,8 +420,37 @@ const ProfilePage = () => {
           </p>
         </div>
 
-        {/* Plan badge */}
-        <div className="flex flex-col items-center gap-2">
+        {/* Admin + Plan badges */}
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          {isAdmin && (
+            <div
+              className="flex items-center gap-1.5 rounded-full px-3 py-1"
+              style={{
+                background: "hsla(44,100%,50%,0.15)",
+                border: "1px solid hsla(44,100%,58%,0.4)",
+                boxShadow: "0 0 10px hsla(44,100%,55%,0.2)",
+              }}
+            >
+              <svg width="13" height="10" viewBox="0 0 48 36" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M4 30 L4 22 L12 8 L24 18 L36 8 L44 22 L44 30 Z" fill="hsl(44,100%,58%)" stroke="hsl(45,100%,75%)" strokeWidth="1.2" strokeLinejoin="round"/>
+                <rect x="4" y="27" width="40" height="5" rx="2" fill="hsl(42,90%,48%)" stroke="hsl(45,100%,75%)" strokeWidth="0.8"/>
+                <circle cx="24" cy="24" r="3" fill="hsl(315,95%,65%)"/>
+              </svg>
+              <span
+                className="text-xs font-bold uppercase tracking-wider"
+                style={{
+                  background: "linear-gradient(90deg, hsl(42,100%,52%), hsl(52,100%,78%), hsl(42,100%,52%))",
+                  backgroundSize: "200% auto",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  animation: "gold-shimmer 2.8s linear infinite",
+                }}
+              >
+                Admin
+              </span>
+            </div>
+          )}
           <div
             className="flex items-center gap-1.5 rounded-full px-3 py-1"
             style={{
