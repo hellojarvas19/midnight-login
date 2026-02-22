@@ -165,7 +165,7 @@ const CrownSparkles = () => {
 };
 
 const ProfilePage = () => {
-  const { activePlan, isPlanActive } = usePlan();
+  const { activePlan, isPlanActive, planExpiresAt } = usePlan();
   const { profile, signOut, user: authUser } = useAuth();
   const navigate = useNavigate();
   const [copiedId, setCopiedId]           = useState(false);
@@ -493,11 +493,14 @@ const ProfilePage = () => {
             </span>
           </div>
           <div className="grid grid-cols-3 divide-x" style={{ borderColor: "hsla(44,60%,40%,0.12)" }}>
-            {[
-              { icon: CreditCard, label: "Price", value: activePlan?.price ?? "—", color: "hsl(var(--primary))", bg: "hsla(315,80%,40%,0.15)" },
-              { icon: Zap, label: "Duration", value: activePlan ? `${activePlan.duration}d` : "—", color: "hsl(48,100%,65%)", bg: "hsla(44,80%,40%,0.15)" },
-              { icon: Clock, label: "Status", value: isPlanActive ? "Active" : "Inactive", color: isPlanActive ? "hsl(142,70%,55%)" : "hsl(0,75%,60%)", bg: isPlanActive ? "hsla(142,60%,30%,0.15)" : "hsla(0,60%,30%,0.15)" },
-            ].map((item) => {
+            {(() => {
+              const daysLeft = planExpiresAt ? Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / 86400000)) : 0;
+              return [
+                { icon: CreditCard, label: "Price", value: activePlan?.price ?? "—", color: "hsl(var(--primary))", bg: "hsla(315,80%,40%,0.15)" },
+                { icon: Zap, label: "Duration", value: isPlanActive ? `${daysLeft}d left` : "—", color: "hsl(48,100%,65%)", bg: "hsla(44,80%,40%,0.15)" },
+                { icon: Clock, label: "Status", value: isPlanActive ? "Active" : "Expired", color: isPlanActive ? "hsl(142,70%,55%)" : "hsl(0,75%,60%)", bg: isPlanActive ? "hsla(142,60%,30%,0.15)" : "hsla(0,60%,30%,0.15)" },
+              ];
+            })().map((item) => {
               const ItemIcon = item.icon;
               return (
                 <div key={item.label} className="flex flex-col items-center gap-1.5 py-3 px-2" style={{ borderColor: "hsla(44,60%,40%,0.12)" }}>
@@ -616,7 +619,7 @@ const ProfilePage = () => {
         <div className="mt-4 flex flex-col gap-1.5">
           <div className="flex justify-between text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             <span>Usage this month</span>
-            <span style={{ color: "hsl(var(--foreground))" }}>180 / 2,660 used</span>
+            <span style={{ color: "hsl(var(--foreground))" }}>{creditsCount.toLocaleString()} credits</span>
           </div>
           <div className="w-full rounded-full overflow-hidden" style={{ height: 6, background: "hsla(315,40%,20%,0.3)" }}>
             <div
