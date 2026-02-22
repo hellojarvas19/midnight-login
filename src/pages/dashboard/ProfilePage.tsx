@@ -424,13 +424,13 @@ const ProfilePage = () => {
         <div className="flex flex-col items-center gap-2">
           {isAdmin && (
              <div
-              className="inline-flex items-center gap-2 rounded-full px-6 py-1.5 whitespace-nowrap"
+              className="flex items-center justify-center gap-2 rounded-full px-6 py-1.5 whitespace-nowrap self-center mx-auto"
               style={{
                 background: "hsla(44,100%,50%,0.15)",
                 border: "1px solid hsla(44,100%,58%,0.4)",
                 boxShadow: "0 0 12px hsla(44,100%,55%,0.25), 0 0 24px hsla(44,100%,55%,0.12)",
                 animation: "gold-aura-pulse 2.4s ease-in-out infinite",
-                minWidth: "fit-content",
+                width: "fit-content",
               }}
             >
               <svg width="16" height="12" viewBox="0 0 48 36" fill="none" style={{ flexShrink: 0 }}>
