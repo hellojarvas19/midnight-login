@@ -239,20 +239,28 @@ const CheckerPage = () => {
     URL.revokeObjectURL(url);
   };
 
+  const MAX_CARDS = 500;
+
   const parseLines = (text: string): CardResult[] =>
     text
       .split("\n")
       .map((l) => l.trim())
       .filter((l) => l.length > 8)
+      .slice(0, MAX_CARDS)
       .map((l) => {
         const { card, expiry, cvv } = parseCardLine(l);
         return { raw: l, card, expiry, cvv, luhnValid: luhnCheck(card), status: "pending" as const };
       });
 
+  const rawLineCount = (text: string) => text.split("\n").map((l) => l.trim()).filter((l) => l.length > 8).length;
+  const [truncatedCount, setTruncatedCount] = useState(0);
+
   const loadFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
+      const total = rawLineCount(text);
+      setTruncatedCount(total > MAX_CARDS ? total - MAX_CARDS : 0);
       setPasteText(text);
       setCards(parseLines(text));
     };
@@ -275,6 +283,8 @@ const CheckerPage = () => {
   };
 
   const handlePasteChange = (text: string) => {
+    const total = rawLineCount(text);
+    setTruncatedCount(total > MAX_CARDS ? total - MAX_CARDS : 0);
     setPasteText(text);
     setCards(parseLines(text));
   };
@@ -673,6 +683,19 @@ const CheckerPage = () => {
 
         </div>
       </div>
+
+      {/* ── 500 card limit warning ── */}
+      {truncatedCount > 0 && !isRunning && (
+        <div
+          className="animate-card-entrance rounded-xl px-4 py-3 flex items-center gap-3"
+          style={{ animationDelay: "60ms", animationFillMode: "both", background: "hsla(44,80%,30%,0.2)", border: "1px solid hsla(44,80%,55%,0.3)" }}
+        >
+          <Shield size={15} style={{ color: "hsl(48,100%,65%)", flexShrink: 0 }} />
+          <p className="text-xs font-semibold" style={{ color: "hsl(48,100%,68%)" }}>
+            Limit: <span className="font-black">500 cards</span> per check. {truncatedCount} extra card{truncatedCount !== 1 ? "s were" : " was"} ignored.
+          </p>
+        </div>
+      )}
 
       {/* ── Luhn warning ── */}
       {cards.length > 0 && invalidCount > 0 && !isRunning && (
