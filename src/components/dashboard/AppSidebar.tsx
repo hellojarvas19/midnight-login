@@ -30,12 +30,29 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
   const [avatarHovered, setAvatarHovered] = useState(false);
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
       setIsAdmin(!!data);
     });
+
+    // Check owner status via edge function
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/owner-payments?action=list&status=pending`,
+          { headers: { Authorization: `Bearer ${session.access_token}` } }
+        );
+        setIsOwner(res.status !== 403);
+      } catch {
+        setIsOwner(false);
+      }
+    })();
   }, [user]);
 
   return (
@@ -249,7 +266,7 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
 
       {/* Nav items */}
       <nav className="flex flex-col gap-1 px-2 flex-1">
-        {NAV_ITEMS.map(({ id, label, Icon }) => {
+        {NAV_ITEMS.filter(({ id }) => id !== "owner" || isOwner).map(({ id, label, Icon }) => {
           const isActive = active === id;
           return (
             <button
