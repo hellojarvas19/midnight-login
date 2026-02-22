@@ -1,5 +1,20 @@
-import { useEffect, useRef, useState } from "react";
-import { Activity, BarChart2, CheckCircle, CreditCard, ShieldCheck, Zap, TrendingUp } from "lucide-react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { Activity, BarChart2, CheckCircle, CreditCard, ShieldCheck, Zap, TrendingUp, Wallet, Clock, Crown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePlan, PLAN_DETAILS } from "@/contexts/PlanContext";
+
+/* ─── Daily usage helper (same key format as CheckerPage) ─── */
+function getDailyKey(userId: string) {
+  const d = new Date();
+  return `checker_daily_${userId}_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+function getDailyUsage(userId: string): number {
+  try {
+    return parseInt(localStorage.getItem(getDailyKey(userId)) || "0", 10);
+  } catch {
+    return 0;
+  }
+}
 
 /* ─── Animated counter hook ─── */
 function useCountUp(target: number, duration = 1400, delay = 0) {
@@ -50,7 +65,6 @@ const StatCard = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Label + icon badge */}
       <div className="flex items-center gap-2">
         <div className="rounded-lg p-1.5 shrink-0 flex items-center gap-1" style={{ background: "hsla(315,80%,40%,0.15)" }}>
           {emoji && (
@@ -65,7 +79,6 @@ const StatCard = ({
         </span>
       </div>
 
-      {/* Counter */}
       <p
         className="text-3xl font-extrabold tracking-tight tabular-nums pl-0.5"
         style={{
@@ -78,139 +91,16 @@ const StatCard = ({
         {suffix}
       </p>
 
-      {/* Progress bar */}
       <div className="h-px rounded-full overflow-hidden" style={{ background: "hsla(315,40%,30%,0.3)" }}>
         <div
           className="h-full rounded-full transition-all duration-[1600ms] ease-out"
           style={{
-            width: `${Math.min((count / target) * 100, 100)}%`,
+            width: `${Math.min((count / (target || 1)) * 100, 100)}%`,
             background: "linear-gradient(90deg, hsl(315,95%,45%), hsl(315,90%,65%))",
             boxShadow: "0 0 6px hsla(315,90%,55%,0.5)",
           }}
         />
       </div>
-    </div>
-  );
-};
-
-/* ─── Activity Feed ─── */
-type ActivityEntry = {
-  id: number;
-  icon: typeof Activity;
-  iconBg: string;
-  label: string;
-  card: string;
-  timestamp: Date;
-};
-
-const SEED_ACTIVITIES: Omit<ActivityEntry, "id">[] = [
-  {
-    icon: CheckCircle,
-    iconBg: "hsla(315,80%,45%,0.18)",
-    label: "Card approved",
-    card: "•••• 4242",
-    timestamp: new Date(Date.now() - 1000 * 60 * 2),
-  },
-  {
-    icon: CreditCard,
-    iconBg: "hsla(315,60%,40%,0.14)",
-    label: "Batch processed",
-    card: "•••• 1337",
-    timestamp: new Date(Date.now() - 1000 * 60 * 8),
-  },
-  {
-    icon: ShieldCheck,
-    iconBg: "hsla(315,70%,42%,0.16)",
-    label: "Card checked",
-    card: "•••• 9981",
-    timestamp: new Date(Date.now() - 1000 * 60 * 21),
-  },
-];
-
-function timeAgo(date: Date) {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  return `${Math.floor(minutes / 60)}h ago`;
-}
-
-const LIVE_EVENTS = [
-  { label: "Card approved", card: "•••• 4242" },
-  { label: "Card declined", card: "•••• 1234" },
-  { label: "Mass run completed", card: "•••• 8800" },
-  { label: "Batch processed", card: "•••• 5566" },
-  { label: "Card checked", card: "•••• 3391" },
-];
-
-const ActivityFeed = () => {
-  const [entries, setEntries] = useState<ActivityEntry[]>(
-    SEED_ACTIVITIES.map((e, i) => ({ ...e, id: i }))
-  );
-  const counterRef = useRef(SEED_ACTIVITIES.length);
-
-  useEffect(() => {
-    const schedule = () => {
-      const delay = 5000 + Math.random() * 4000;
-      return setTimeout(() => {
-        const template = LIVE_EVENTS[Math.floor(Math.random() * LIVE_EVENTS.length)];
-        const newEntry: ActivityEntry = {
-          id: counterRef.current++,
-          icon: CheckCircle,
-          iconBg: "hsla(315,80%,45%,0.18)",
-          label: template.label,
-          card: template.card,
-          timestamp: new Date(),
-        };
-        setEntries((prev) => [newEntry, ...prev].slice(0, 8));
-        timerRef.current = schedule();
-      }, delay);
-    };
-
-    const timerRef: { current: ReturnType<typeof setTimeout> | null } = {
-      current: schedule(),
-    };
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  return (
-    <div className="flex flex-col divide-y" style={{ borderColor: "hsla(315,20%,20%,0.4)" }}>
-      {entries.map((entry, idx) => {
-        const EntryIcon = entry.icon;
-        return (
-          <div
-            key={entry.id}
-            className="flex items-center gap-3 py-3 transition-all duration-500"
-            style={{
-              opacity: idx === 0 ? 1 : Math.max(0.35, 1 - idx * 0.1),
-              animation: idx === 0 ? "card-entrance 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards" : undefined,
-            }}
-          >
-            <div className="rounded-xl p-2 shrink-0" style={{ background: entry.iconBg }}>
-              <EntryIcon
-                size={14}
-                style={{
-                  color: "hsl(var(--primary))",
-                  filter: "drop-shadow(0 0 4px hsla(315,90%,60%,0.5))",
-                }}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: "hsl(var(--foreground))" }}>
-                {entry.label}
-              </p>
-              <p className="text-xs font-mono truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
-                {entry.card}
-              </p>
-            </div>
-            <span className="text-xs shrink-0 tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>
-              {timeAgo(entry.timestamp)}
-            </span>
-          </div>
-        );
-      })}
     </div>
   );
 };
@@ -231,9 +121,30 @@ const LiveDot = () => (
 
 /* ─── Page ─── */
 const HomePage = () => {
+  const { profile, user } = useAuth();
+  const { activePlan, isPlanActive, planExpiresAt } = usePlan();
+
+  const dailyUsed = useMemo(() => {
+    if (!user) return 0;
+    return getDailyUsage(user.id);
+  }, [user]);
+
+  const dailyLimit = activePlan?.dailyLimit ?? 0;
+  const dailyRemaining = Math.max(0, dailyLimit - dailyUsed);
+  const dailyPercent = dailyLimit > 0 ? Math.min((dailyUsed / dailyLimit) * 100, 100) : 0;
+
+  const credits = profile?.credits ?? 0;
+  const username = profile?.username || "User";
+
+  const daysLeft = useMemo(() => {
+    if (!planExpiresAt) return 0;
+    const diff = new Date(planExpiresAt).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [planExpiresAt]);
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Welcome header — matches Checker page style */}
+      {/* Welcome header */}
       <div
         className="animate-card-entrance"
         style={{ animationDelay: "0ms", animationFillMode: "both" }}
@@ -249,7 +160,7 @@ const HomePage = () => {
             textShadow: "0 0 30px hsla(315,90%,60%,0.45), 0 0 60px hsla(315,90%,50%,0.2)",
           }}
         >
-          0xAdam
+          {username}
         </h1>
         <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           Here's a live snapshot of your checker activity.
@@ -261,7 +172,6 @@ const HomePage = () => {
         className="glass-card animate-card-entrance rounded-2xl overflow-hidden"
         style={{ animationDelay: "60ms", animationFillMode: "both" }}
       >
-        {/* Section header row — matches Checker/Profile pattern */}
         <div
           className="flex items-center gap-3 px-5 py-4 border-b"
           style={{ borderColor: "hsla(315,30%,25%,0.2)" }}
@@ -272,36 +182,92 @@ const HomePage = () => {
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
             Activity Overview
           </p>
+          <div className="ml-auto flex items-center gap-1.5">
+            <LiveDot />
+            <span className="text-xs font-medium" style={{ color: "hsl(var(--primary))" }}>Live</span>
+          </div>
         </div>
 
-        {/* Stat cards grid */}
         <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-5">
-          <StatCard label="Total Checks"   target={1284} icon={BarChart2}   emoji="📊" emojiAnimation="emoji-bounce 1.6s ease-in-out infinite" delay={60}  />
-          <StatCard label="Approved Today" target={3}    icon={CheckCircle} emoji="✅" emojiAnimation="emoji-spin 2.8s linear infinite"         delay={120} />
-          <StatCard label="Cards Scanned"  target={847}  icon={CreditCard}  emoji="💳" emojiAnimation="emoji-wobble 2s ease-in-out infinite"     delay={180} />
+          <StatCard label="Credits" target={credits} icon={Wallet} emoji="💰" emojiAnimation="emoji-bounce 1.6s ease-in-out infinite" delay={60} />
+          <StatCard label="Used Today" target={dailyUsed} icon={BarChart2} emoji="📊" emojiAnimation="emoji-spin 2.8s linear infinite" delay={120} />
+          <StatCard label="Remaining" target={dailyRemaining} icon={CheckCircle} emoji="✅" emojiAnimation="emoji-wobble 2s ease-in-out infinite" delay={180} />
         </div>
       </div>
 
-      {/* Live activity feed */}
-      <div
-        className="glass-card animate-card-entrance rounded-2xl p-6"
-        style={{ animationDelay: "240ms", animationFillMode: "both" }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2
-            className="text-sm font-semibold uppercase tracking-wider"
-            style={{ color: "hsl(var(--muted-foreground))" }}
-          >
-            Recent Activity
-          </h2>
-          <div className="flex items-center gap-2">
-            <LiveDot />
-            <span className="text-xs font-medium" style={{ color: "hsl(var(--primary))" }}>
-              Live
+      {/* ── Daily Limit Bar ── */}
+      {isPlanActive && (
+        <div
+          className="glass-card animate-card-entrance rounded-2xl p-5"
+          style={{ animationDelay: "140ms", animationFillMode: "both" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg p-1.5" style={{ background: "hsla(315,80%,40%,0.15)" }}>
+                <Zap size={13} style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 4px hsla(315,90%,60%,0.55))" }} />
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+                Daily Usage
+              </span>
+            </div>
+            <span className="text-xs font-bold tabular-nums" style={{ color: "hsl(var(--foreground))" }}>
+              {dailyUsed.toLocaleString()} / {dailyLimit.toLocaleString()}
             </span>
           </div>
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: "hsla(315,40%,30%,0.3)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-[1600ms] ease-out"
+              style={{
+                width: `${dailyPercent}%`,
+                background: dailyPercent > 90
+                  ? "linear-gradient(90deg, hsl(0,85%,50%), hsl(0,90%,60%))"
+                  : "linear-gradient(90deg, hsl(315,95%,45%), hsl(315,90%,65%))",
+                boxShadow: "0 0 8px hsla(315,90%,55%,0.5)",
+              }}
+            />
+          </div>
         </div>
-        <ActivityFeed />
+      )}
+
+      {/* ── Plan Info Card ── */}
+      <div
+        className="glass-card animate-card-entrance rounded-2xl p-5"
+        style={{ animationDelay: "200ms", animationFillMode: "both" }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="rounded-xl p-2" style={{ background: "hsla(315,80%,40%,0.15)" }}>
+            <Crown size={15} style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 5px hsla(315,90%,60%,0.55))" }} />
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+            Plan Status
+          </p>
+        </div>
+
+        {isPlanActive && activePlan ? (
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg font-extrabold" style={{ color: "hsl(var(--foreground))", fontFamily: "'Space Grotesk', sans-serif" }}>
+                {activePlan.name}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+                {dailyLimit.toLocaleString()} credits/day
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center gap-1.5">
+                <Clock size={12} style={{ color: "hsl(var(--muted-foreground))" }} />
+                <span className="text-sm font-bold tabular-nums" style={{ color: "hsl(var(--foreground))" }}>
+                  {daysLeft}d
+                </span>
+              </div>
+              <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>remaining</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+            No active plan. Subscribe to start checking cards.
+          </p>
+        )}
       </div>
     </div>
   );
