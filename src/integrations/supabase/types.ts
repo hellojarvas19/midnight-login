@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_usage: {
+        Row: {
+          checks_used: number
+          id: string
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          checks_used?: number
+          id?: string
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          checks_used?: number
+          id?: string
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -197,6 +221,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deduct_credits_atomic: {
+        Args: {
+          p_checks_requested: number
+          p_daily_limit: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
