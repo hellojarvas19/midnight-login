@@ -459,7 +459,7 @@ const MessageBubble = ({
       {/* Bubble column */}
       <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
         {/* Sender name + badge */}
-        {!isOwn ? (
+        {!isOwn && (
           <div className="flex items-center gap-1.5 px-1">
             <UserProfilePopover name={msg.sender} role={effectiveRole} avatar={msg.senderAvatar}>
               <button className="text-xs font-semibold cursor-pointer hover:underline" style={{ color: effectiveRole === "owner" ? "hsl(42,75%,60%)" : effectiveRole === "admin" ? "hsl(44,100%,65%)" : "hsl(var(--muted-foreground))" }}>
@@ -494,22 +494,6 @@ const MessageBubble = ({
                 Admin
               </span>
             )}
-          </div>
-        ) : isOwnerMsg && (
-          <div className="flex items-center gap-1.5 px-1 justify-end">
-            <span
-              className="text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5 leading-none flex items-center gap-1"
-              style={{
-                background: "linear-gradient(135deg, hsla(42,60%,20%,0.5), hsla(36,50%,15%,0.5))",
-                border: "1px solid hsla(42,70%,45%,0.35)",
-                color: "hsl(42,75%,60%)",
-                boxShadow: "0 0 10px hsla(42,70%,40%,0.15)",
-                animation: "owner-holo-sweep 4s ease-in-out infinite",
-              }}
-            >
-              <Crown size={8} style={{ filter: "drop-shadow(0 0 3px hsla(42,80%,55%,0.4))" }} />
-              Owner
-            </span>
           </div>
         )}
 
