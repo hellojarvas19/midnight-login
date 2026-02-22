@@ -666,6 +666,7 @@ const ChatPage = () => {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -693,12 +694,17 @@ const ChatPage = () => {
     return Array.from(seen.values());
   }, [messages]);
 
-  /* ── Check admin role ── */
+  /* ── Check admin & owner role ── */
   useEffect(() => {
     if (!user) return;
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
       setIsAdmin(!!data);
     });
+    (async () => {
+      const { data: ownerRole } = await supabase.rpc("has_role", { _user_id: user.id, _role: "owner" });
+      const { data: isPrimary } = await supabase.rpc("is_primary_owner", { _user_id: user.id });
+      setIsOwner(!!ownerRole || !!isPrimary);
+    })();
   }, [user]);
 
   /* ── Load messages from DB ── */
@@ -1016,6 +1022,23 @@ const ChatPage = () => {
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
               Community Chat
             </p>
+            {isOwner && (
+              <span
+                className="text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1"
+                style={{
+                  background: "linear-gradient(135deg, hsla(42,60%,20%,0.5), hsla(36,50%,15%,0.5))",
+                  border: "1px solid hsla(42,70%,45%,0.35)",
+                  color: "hsl(42,75%,60%)",
+                  boxShadow: "0 0 12px hsla(42,70%,40%,0.15)",
+                  animation: "owner-holo-sweep 4s ease-in-out infinite",
+                  fontSize: 10,
+                  letterSpacing: "0.05em",
+                }}
+              >
+                <Crown size={10} style={{ filter: "drop-shadow(0 0 3px hsla(42,80%,55%,0.4))" }} />
+                OWNER
+              </span>
+            )}
             {isMuted && (
               <span className="text-xs px-1.5 py-0.5 rounded-md font-medium" style={{ background: "hsla(0,0%,50%,0.15)", color: "hsl(var(--muted-foreground))", fontSize: 10 }}>
                 Muted
