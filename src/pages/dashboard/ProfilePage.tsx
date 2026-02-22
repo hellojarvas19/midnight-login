@@ -423,8 +423,8 @@ const ProfilePage = () => {
         {/* Plan + Admin badges */}
         <div className="flex flex-col items-center gap-2">
           {isAdmin && (
-            <div
-              className="flex items-center gap-1.5 rounded-full px-4 py-1.5"
+             <div
+              className="flex items-center gap-2 rounded-full px-5 py-1.5"
               style={{
                 background: "hsla(44,100%,50%,0.15)",
                 border: "1px solid hsla(44,100%,58%,0.4)",
