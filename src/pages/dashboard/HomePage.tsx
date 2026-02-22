@@ -2,18 +2,16 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { Activity, BarChart2, CheckCircle, CreditCard, ShieldCheck, Zap, TrendingUp, Wallet, Clock, Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlan, PLAN_DETAILS } from "@/contexts/PlanContext";
+import { supabase } from "@/integrations/supabase/client";
 
-/* ─── Daily usage helper (same key format as CheckerPage) ─── */
-function getDailyKey(userId: string) {
-  const d = new Date();
-  return `checker_daily_${userId}_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-}
-function getDailyUsage(userId: string): number {
-  try {
-    return parseInt(localStorage.getItem(getDailyKey(userId)) || "0", 10);
-  } catch {
-    return 0;
-  }
+async function fetchDailyUsage(userId: string): Promise<number> {
+  const { data } = await supabase
+    .from("daily_usage")
+    .select("checks_used")
+    .eq("user_id", userId)
+    .eq("usage_date", new Date().toISOString().slice(0, 10))
+    .maybeSingle();
+  return data?.checks_used ?? 0;
 }
 
 /* ─── Animated counter hook ─── */
@@ -124,9 +122,11 @@ const HomePage = () => {
   const { profile, user } = useAuth();
   const { activePlan, isPlanActive, planExpiresAt } = usePlan();
 
-  const dailyUsed = useMemo(() => {
-    if (!user) return 0;
-    return getDailyUsage(user.id);
+  const [dailyUsed, setDailyUsed] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchDailyUsage(user.id).then(setDailyUsed);
   }, [user]);
 
   const dailyLimit = activePlan?.dailyLimit ?? 0;

@@ -147,19 +147,21 @@ const CheckerPage = () => {
   const { activePlan, isPlanActive } = usePlan();
   const { user: authUser, profile, refreshProfile } = useAuth();
 
-  // ── Daily usage tracking ──
-  const getDailyKey = () => `checker_daily_${authUser?.id}_${new Date().toISOString().slice(0, 10)}`;
-  const getDailyUsage = () => {
-    try { return parseInt(localStorage.getItem(getDailyKey()) || "0", 10); } catch { return 0; }
-  };
-  const addDailyUsage = (count: number) => {
-    const key = getDailyKey();
-    const current = getDailyUsage();
-    localStorage.setItem(key, String(current + count));
-  };
+  // ── Daily usage tracking (DB-based) ──
+  const [dailyUsed, setDailyUsed] = useState(0);
   const dailyLimit = activePlan?.dailyLimit ?? 0;
-  const dailyUsed = getDailyUsage();
   const dailyRemaining = Math.max(0, dailyLimit - dailyUsed);
+
+  useEffect(() => {
+    if (!authUser) return;
+    supabase
+      .from("daily_usage")
+      .select("checks_used")
+      .eq("user_id", authUser.id)
+      .eq("usage_date", new Date().toISOString().slice(0, 10))
+      .maybeSingle()
+      .then(({ data }) => setDailyUsed(data?.checks_used ?? 0));
+  }, [authUser]);
 
   // ── Typewriter for heading ──
   const HEADING = "Checker";
@@ -317,16 +319,14 @@ const CheckerPage = () => {
     const validCards = cards.filter((c) => c.luhnValid);
     if (!gateway || validCards.length === 0) return;
 
-    // Check daily limit
-    const currentUsage = getDailyUsage();
-    const remaining = Math.max(0, activePlan.dailyLimit - currentUsage);
-    if (remaining === 0) {
+    // Pre-check daily limit from local state
+    if (dailyRemaining === 0) {
       toast({ title: "Daily limit reached", description: `You've used all ${activePlan.dailyLimit.toLocaleString()} credits for today. Resets at midnight.`, variant: "destructive" });
       return;
     }
 
     // Cap cards to remaining daily limit
-    const cardsToCheck = Math.min(validCards.length, remaining);
+    const cardsToCheck = Math.min(validCards.length, dailyRemaining);
     if (cardsToCheck < validCards.length) {
       toast({ title: "Partial check", description: `Only ${cardsToCheck.toLocaleString()} of ${validCards.length.toLocaleString()} cards will be checked (daily limit).` });
     }
@@ -358,16 +358,18 @@ const CheckerPage = () => {
       checkedCount++;
     }
 
-    // Deduct credits and track daily usage
-    if (checkedCount > 0) {
-      addDailyUsage(checkedCount);
-
-      // Deduct credits from profile
-      if (authUser && profile) {
-        const newCredits = Math.max(0, (profile.credits || 0) - checkedCount);
-        await supabase.from("profiles").update({ credits: newCredits } as any).eq("id", authUser.id);
-        refreshProfile();
+    // Atomically deduct credits and track daily usage via DB function
+    if (checkedCount > 0 && authUser) {
+      const { data } = await supabase.rpc("deduct_credits_atomic", {
+        p_user_id: authUser.id,
+        p_checks_requested: checkedCount,
+        p_daily_limit: activePlan.dailyLimit,
+      });
+      const result = data as unknown as { daily_used?: number } | null;
+      if (result) {
+        setDailyUsed(result.daily_used ?? dailyUsed + checkedCount);
       }
+      refreshProfile();
     }
 
     setIsRunning(false);
