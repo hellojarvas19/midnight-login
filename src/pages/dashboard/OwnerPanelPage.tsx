@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Check, X, Clock, RefreshCw, Shield, User, Hash, Wallet,
   Crown, ShieldAlert, Ban, UserPlus, UserMinus, Coins, ChevronDown,
-  ChevronUp, Settings2, Zap, Star,
+  ChevronUp, Settings2, Zap, Star, Globe, Plus, Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -438,7 +438,7 @@ const PaymentCard = ({ payment, onDecision, processing }: {
 const OwnerPanelPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [tab, setTab] = useState<"users" | "payments">("users");
+  const [tab, setTab] = useState<"users" | "payments" | "sites">("users");
   const [whoami, setWhoami] = useState<WhoAmI | null>(null);
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -447,6 +447,49 @@ const OwnerPanelPage = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Sites state
+  const [sitesList, setSitesList] = useState<{ id: string; url: string; created_at: string }[]>([]);
+  const [newSiteUrl, setNewSiteUrl] = useState("");
+  const [sitesLoading, setSitesLoading] = useState(false);
+
+  const fetchSites = useCallback(async () => {
+    setSitesLoading(true);
+    try {
+      const { data, error } = await supabase.from("shopify_sites").select("id, url, created_at").order("created_at", { ascending: false });
+      if (error) throw error;
+      setSitesList(data || []);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSitesLoading(false);
+    }
+  }, [toast]);
+
+  const addSite = async () => {
+    const url = newSiteUrl.trim();
+    if (!url || !url.startsWith("http")) return;
+    try {
+      const { error } = await supabase.from("shopify_sites").insert({ url, added_by: user!.id });
+      if (error) throw error;
+      setNewSiteUrl("");
+      toast({ title: "Site added" });
+      fetchSites();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const removeSite = async (id: string) => {
+    try {
+      const { error } = await supabase.from("shopify_sites").delete().eq("id", id);
+      if (error) throw error;
+      setSitesList((prev) => prev.filter((s) => s.id !== id));
+      toast({ title: "Site removed" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
 
   // Check identity
   useEffect(() => {
@@ -485,8 +528,9 @@ const OwnerPanelPage = () => {
   useEffect(() => {
     if (!isOwner) return;
     if (tab === "users") fetchUsers();
-    else fetchPayments();
-  }, [isOwner, tab, fetchUsers, fetchPayments]);
+    else if (tab === "payments") fetchPayments();
+    else fetchSites();
+  }, [isOwner, tab, fetchUsers, fetchPayments, fetchSites]);
 
   // User action handler
   const handleUserAction = async (action: string, targetId: string, extra?: any) => {
@@ -560,11 +604,12 @@ const OwnerPanelPage = () => {
       <div className="flex items-center gap-2">
         <TabBtn active={tab === "users"} label="Users" onClick={() => setTab("users")} />
         <TabBtn active={tab === "payments"} label="Payments" onClick={() => setTab("payments")} />
+        <TabBtn active={tab === "sites"} label="Sites" onClick={() => setTab("sites")} />
         <div className="flex-1" />
-        <button type="button" onClick={() => tab === "users" ? fetchUsers() : fetchPayments()}
+        <button type="button" onClick={() => tab === "users" ? fetchUsers() : tab === "payments" ? fetchPayments() : fetchSites()}
           className="rounded-xl p-2 transition-all"
           style={{ background: "hsla(315,30%,15%,0.3)", border: "1px solid hsla(315,40%,30%,0.25)", color: "hsl(var(--muted-foreground))" }}>
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          <RefreshCw size={14} className={loading || sitesLoading ? "animate-spin" : ""} />
         </button>
       </div>
 
@@ -642,6 +687,79 @@ const OwnerPanelPage = () => {
             <div className="flex flex-col gap-3">
               {payments.map((p) => (
                 <PaymentCard key={p.id} payment={p} onDecision={handlePayDecision} processing={processing} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Sites Tab */}
+      {tab === "sites" && (
+        <>
+          {/* Add site input */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newSiteUrl}
+              onChange={(e) => setNewSiteUrl(e.target.value)}
+              placeholder="https://example.myshopify.com"
+              onKeyDown={(e) => e.key === "Enter" && addSite()}
+              className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none font-mono"
+              style={{
+                background: "hsla(315,30%,10%,0.5)",
+                border: "1px solid hsla(315,40%,30%,0.3)",
+                color: "hsl(var(--foreground))",
+              }}
+            />
+            <button
+              type="button"
+              onClick={addSite}
+              disabled={!newSiteUrl.trim() || !newSiteUrl.startsWith("http")}
+              className="rounded-xl px-4 py-2.5 text-sm font-bold flex items-center gap-1.5 transition-all disabled:opacity-40"
+              style={{
+                background: "linear-gradient(135deg, hsl(315,95%,40%), hsl(315,85%,50%))",
+                color: "hsl(var(--primary-foreground))",
+                border: "1px solid hsla(315,80%,60%,0.3)",
+              }}
+            >
+              <Plus size={14} /> Add
+            </button>
+          </div>
+
+          {sitesLoading ? (
+            <div className="flex justify-center py-12">
+              <RefreshCw size={20} className="animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
+            </div>
+          ) : sitesList.length === 0 ? (
+            <div className="glass-card rounded-2xl p-8 flex flex-col items-center gap-3">
+              <Globe size={28} style={{ color: "hsl(var(--muted-foreground))", opacity: 0.5 }} />
+              <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No Shopify sites added yet</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                {sitesList.length} site{sitesList.length !== 1 ? "s" : ""} · checker rotates every 10 cards
+              </p>
+              {sitesList.map((site) => (
+                <div
+                  key={site.id}
+                  className="glass-card rounded-xl px-4 py-3 flex items-center gap-3 animate-card-entrance"
+                  style={{ border: "1px solid hsla(315,40%,30%,0.25)" }}
+                >
+                  <Globe size={13} style={{ color: "hsl(var(--primary))" }} />
+                  <span className="flex-1 text-sm font-mono truncate" style={{ color: "hsl(var(--foreground))" }}>{site.url}</span>
+                  <span className="text-[10px] shrink-0" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {new Date(site.created_at).toLocaleDateString()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeSite(site.id)}
+                    className="shrink-0 rounded-lg p-1.5 transition-all hover:scale-110"
+                    style={{ color: "hsl(0,75%,60%)" }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               ))}
             </div>
           )}

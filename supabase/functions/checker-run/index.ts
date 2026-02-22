@@ -430,18 +430,30 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { job_id, cards, sites, proxies } = body as {
+    const { job_id, cards, proxies } = body as {
       job_id: string;
       cards: { card: string; expiry: string; cvv: string }[];
-      sites: string[];
       proxies: string[];
     };
 
-    if (!job_id || !cards?.length || !sites?.length || !proxies?.length) {
-      return new Response(JSON.stringify({ error: "Missing required fields: job_id, cards, sites, proxies" }), {
+    if (!job_id || !cards?.length || !proxies?.length) {
+      return new Response(JSON.stringify({ error: "Missing required fields: job_id, cards, proxies" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Fetch sites from DB (owner-managed)
+    const { data: siteRows, error: sitesErr } = await supabase
+      .from("shopify_sites")
+      .select("url");
+
+    if (sitesErr || !siteRows?.length) {
+      return new Response(JSON.stringify({ error: "No Shopify sites configured. Ask an owner to add sites." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const sites = siteRows.map((r: any) => r.url);
 
     // Update job to running
     await supabase.from("check_jobs").update({ status: "running" }).eq("id", job_id);

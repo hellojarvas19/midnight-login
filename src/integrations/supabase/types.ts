@@ -344,6 +344,27 @@ export type Database = {
           },
         ]
       }
+      shopify_sites: {
+        Row: {
+          added_by: string
+          created_at: string
+          id: string
+          url: string
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          id?: string
+          url: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          id?: string
+          url?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

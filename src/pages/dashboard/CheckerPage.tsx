@@ -192,21 +192,11 @@ const CheckerPage = () => {
   const abortRef = useRef<boolean>(false);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
 
-  // ── Sites input ──
-  const [sitesOpen, setSitesOpen] = useState(false);
-  const [sitesInput, setSitesInput] = useState("");
-  const [sites, setSites] = useState<string[]>([]);
-
-  const addSites = () => {
-    const lines = sitesInput.split("\n").map((l) => l.trim()).filter((l) => l.length > 0 && l.startsWith("http"));
-    if (lines.length === 0) return;
-    setSites((prev) => Array.from(new Set([...prev, ...lines])));
-    setSitesInput("");
-  };
-
-  const removeSite = (idx: number) => {
-    setSites((prev) => prev.filter((_, i) => i !== idx));
-  };
+   // Sites are now managed by owners — fetch count for display
+  const [sitesCount, setSitesCount] = useState(0);
+  useEffect(() => {
+    supabase.from("shopify_sites").select("id", { count: "exact", head: true }).then(({ count }) => setSitesCount(count ?? 0));
+  }, []);
 
   const addProxies = () => {
     const lines = proxyInput
@@ -382,8 +372,8 @@ const CheckerPage = () => {
     }
 
     // Enforce sites requirement for shopify gateway
-    if (gateway === "shopify" && sites.length === 0) {
-      toast({ title: "Sites Required", description: "You must add at least one Shopify site URL.", variant: "destructive" });
+    if (gateway === "shopify" && sitesCount === 0) {
+      toast({ title: "No Sites Available", description: "An owner must add Shopify sites before you can run the checker.", variant: "destructive" });
       return;
     }
 
@@ -429,7 +419,6 @@ const CheckerPage = () => {
         user_id: authUser!.id,
         gateway,
         total_cards: cardsToCheck,
-        sites,
         proxies,
       })
       .select("id")
@@ -456,9 +445,9 @@ const CheckerPage = () => {
 
     await supabase.from("check_results").insert(resultRows);
 
-    // Call edge function
+    // Call edge function (sites fetched from DB by the function)
     const { error: fnErr } = await supabase.functions.invoke("checker-run", {
-      body: { job_id: jobId, cards: cardsPayload, sites, proxies },
+      body: { job_id: jobId, cards: cardsPayload, proxies },
     });
 
     if (fnErr) {
@@ -625,97 +614,18 @@ const CheckerPage = () => {
             </Select>
           </div>
 
-          {/* ── Sites section ── */}
+          {/* ── Sites info (owner-managed) ── */}
           {gateway === "shopify" && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  <span className="flex items-center gap-1.5">
-                    <Globe size={11} style={{ color: "hsl(var(--primary))" }} />
-                    Shopify Sites
-                  </span>
-                  {sites.length > 0 && (
-                    <span className="ml-2 normal-case font-normal" style={{ color: "hsl(142,70%,55%)", opacity: 0.8 }}>
-                      {sites.length} loaded · rotates every 10 cards
-                    </span>
-                  )}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setSitesOpen((o) => !o)}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-300 hover:scale-105 active:scale-95"
-                  style={{
-                    background: sitesOpen ? "hsla(315,40%,15%,0.7)" : "hsla(315,30%,12%,0.6)",
-                    color: sitesOpen ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-                    border: sitesOpen ? "1px solid hsla(315,70%,55%,0.35)" : "1px solid hsla(315,25%,30%,0.2)",
-                    boxShadow: sitesOpen ? "0 0 10px hsla(315,80%,50%,0.2)" : "none",
-                  }}
-                >
-                  {sitesOpen ? <><X size={12} /> Close</> : <><Plus size={12} /> Add</>}
-                </button>
-              </div>
-
-              {/* Sites input */}
-              <div style={{ maxHeight: sitesOpen ? "320px" : "0px", opacity: sitesOpen ? 1 : 0, overflow: "hidden", transition: "max-height 0.38s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease" }}>
-                <div className="flex flex-col gap-2 pt-1">
-                  <textarea
-                    value={sitesInput}
-                    onChange={(e) => setSitesInput(e.target.value)}
-                    placeholder={"https://store1.com\nhttps://store2.com\nhttps://store3.myshopify.com"}
-                    rows={4}
-                    className="glass-input rounded-xl px-4 py-3 text-sm font-mono w-full resize-none"
-                    style={{ color: "hsl(var(--foreground))", lineHeight: 1.7 }}
-                  />
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.65 }}>
-                    One Shopify site URL per line · rotates every 10 cards
-                  </p>
-                  <button
-                    type="button"
-                    disabled={!sitesInput.trim()}
-                    onClick={addSites}
-                    className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{
-                      background: "linear-gradient(135deg, hsl(315,95%,40%), hsl(315,85%,50%))",
-                      color: "hsl(var(--primary-foreground))",
-                      border: "1px solid hsla(315,80%,60%,0.3)",
-                      boxShadow: sitesInput.trim() ? "0 2px 14px hsla(315,90%,50%,0.35)" : "none",
-                    }}
-                  >
-                    <Plus size={12} /> Add {sitesInput.trim().split("\n").filter((l) => l.trim()).length || ""} Site{sitesInput.trim().split("\n").filter((l) => l.trim()).length === 1 ? "" : "s"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Sites list */}
-              {sites.length > 0 && !sitesOpen && (
-                <div
-                  className="rounded-xl overflow-hidden"
-                  style={{
-                    border: "1px solid hsla(315,50%,40%,0.3)",
-                    background: "hsla(315,40%,10%,0.2)",
-                    boxShadow: "0 0 16px hsla(315,55%,25%,0.12)",
-                  }}
-                >
-                  <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "hsla(315,25%,25%,0.15)" }}>
-                    <Globe size={12} style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 4px hsla(315,70%,50%,0.5))" }} />
-                    <span className="text-xs font-semibold" style={{ color: "hsl(var(--primary))" }}>
-                      Rotating {sites.length} site{sites.length === 1 ? "" : "s"} (every 10 cards)
-                    </span>
-                    <button type="button" onClick={() => setSites([])} className="ml-auto text-xs transition-opacity hover:opacity-70" style={{ color: "hsl(var(--muted-foreground))" }}>
-                      Clear all
-                    </button>
-                  </div>
-                  <div style={{ maxHeight: 120, overflowY: "auto" }}>
-                    {sites.map((s, i) => (
-                      <div key={i} className="flex items-center gap-2 px-3 py-1.5 border-b last:border-0" style={{ borderColor: "hsla(315,20%,20%,0.12)" }}>
-                        <span className="text-xs font-mono shrink-0 w-5 text-right" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.5 }}>{i + 1}</span>
-                        <span className="text-xs font-mono flex-1 truncate" style={{ color: "hsl(var(--foreground))", opacity: 0.85 }}>{s}</span>
-                        <button type="button" onClick={() => removeSite(i)} className="shrink-0 transition-opacity hover:opacity-70" style={{ color: "hsl(var(--muted-foreground))" }}><X size={11} /></button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{
+              background: "hsla(315,30%,12%,0.5)",
+              border: `1px solid ${sitesCount > 0 ? "hsla(142,60%,40%,0.3)" : "hsla(0,60%,40%,0.3)"}`,
+            }}>
+              <Globe size={13} style={{ color: sitesCount > 0 ? "hsl(142,70%,55%)" : "hsl(0,75%,60%)" }} />
+              <span className="text-xs font-medium" style={{ color: sitesCount > 0 ? "hsl(142,70%,55%)" : "hsl(0,75%,60%)" }}>
+                {sitesCount > 0
+                  ? `${sitesCount} Shopify site${sitesCount === 1 ? "" : "s"} configured · rotates every 10 cards`
+                  : "No sites configured — ask an owner to add sites"}
+              </span>
             </div>
           )}
 
