@@ -424,15 +424,16 @@ const ProfilePage = () => {
         <div className="flex flex-col items-center gap-2">
           {isAdmin && (
              <div
-              className="flex items-center gap-2 rounded-full px-5 py-1.5"
+              className="inline-flex items-center gap-2 rounded-full px-6 py-1.5 whitespace-nowrap"
               style={{
                 background: "hsla(44,100%,50%,0.15)",
                 border: "1px solid hsla(44,100%,58%,0.4)",
                 boxShadow: "0 0 12px hsla(44,100%,55%,0.25), 0 0 24px hsla(44,100%,55%,0.12)",
                 animation: "gold-aura-pulse 2.4s ease-in-out infinite",
+                minWidth: "fit-content",
               }}
             >
-              <svg width="14" height="11" viewBox="0 0 48 36" fill="none">
+              <svg width="16" height="12" viewBox="0 0 48 36" fill="none" style={{ flexShrink: 0 }}>
                 <path d="M4 30 L4 22 L12 8 L24 18 L36 8 L44 22 L44 30 Z" fill="url(#adminCrownGrad)" stroke="hsl(45,100%,75%)" strokeWidth="1.2" strokeLinejoin="round"/>
                 <rect x="4" y="27" width="40" height="5" rx="2" fill="url(#adminBandGrad)" stroke="hsl(45,100%,75%)" strokeWidth="0.8"/>
                 <circle cx="24" cy="24" r="3" fill="hsl(315,95%,65%)"/>
@@ -448,7 +449,7 @@ const ProfilePage = () => {
                 </defs>
               </svg>
               <span
-                className="text-xs font-black uppercase tracking-wider"
+                className="text-sm font-black uppercase tracking-widest"
                 style={{
                   background: "linear-gradient(90deg, hsl(42,100%,52%), hsl(52,100%,78%), hsl(42,100%,52%))",
                   backgroundSize: "200% auto",
@@ -458,7 +459,7 @@ const ProfilePage = () => {
                   animation: "gold-shimmer 2.8s linear infinite",
                 }}
               >
-                Admin
+                ADMIN
               </span>
             </div>
           )}
