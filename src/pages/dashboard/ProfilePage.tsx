@@ -175,6 +175,7 @@ const ProfilePage = () => {
   const [loggedOut, setLoggedOut]         = useState(false);
   const [creditsBarWidth, setCreditsBarWidth] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [showCreditsCheckout, setShowCreditsCheckout] = useState(false);
@@ -182,8 +183,13 @@ const ProfilePage = () => {
   useEffect(() => {
     if (!authUser) return;
     supabase.rpc("has_role", { _user_id: authUser.id, _role: "admin" as any }).then(({ data, error }) => {
-      console.log("has_role admin check:", { data, error, userId: authUser.id });
       if (!error) setIsAdmin(!!data);
+    });
+    Promise.all([
+      supabase.rpc("has_role", { _user_id: authUser.id, _role: "owner" as any }),
+      supabase.rpc("is_primary_owner", { _user_id: authUser.id }),
+    ]).then(([ownerRes, primaryRes]) => {
+      setIsOwner(!!ownerRes.data || !!primaryRes.data);
     });
   }, [authUser]);
 
@@ -320,7 +326,7 @@ const ProfilePage = () => {
             </svg>
           </div>
 
-          {/* Gold aura ring — sits behind avatar */}
+          {/* Aura ring — gold for normal, red/magenta for owner */}
           <div
             style={{
               position: "absolute",
@@ -331,13 +337,14 @@ const ProfilePage = () => {
               height: 110,
               borderRadius: "50%",
               background: "transparent",
-              boxShadow:
-                "0 0 0 4px hsla(44,100%,58%,0.35), 0 0 22px 6px hsla(44,100%,55%,0.30), 0 0 50px 14px hsla(42,100%,50%,0.16)",
-              animation: "gold-aura-pulse 2.4s ease-in-out infinite",
+              boxShadow: isOwner
+                ? "0 0 0 4px hsla(0,80%,55%,0.4), 0 0 30px 8px hsla(315,80%,50%,0.3), 0 0 60px 16px hsla(0,70%,45%,0.15)"
+                : "0 0 0 4px hsla(44,100%,58%,0.35), 0 0 22px 6px hsla(44,100%,55%,0.30), 0 0 50px 14px hsla(42,100%,50%,0.16)",
+              animation: isOwner ? "owner-aura-pulse 2.4s ease-in-out infinite" : "gold-aura-pulse 2.4s ease-in-out infinite",
               zIndex: 0,
             }}
           />
-          {/* Second softer outer ring */}
+          {/* Second outer ring */}
           <div
             style={{
               position: "absolute",
@@ -348,11 +355,70 @@ const ProfilePage = () => {
               height: 130,
               borderRadius: "50%",
               background: "transparent",
-              boxShadow: "0 0 30px 10px hsla(44,100%,52%,0.10)",
-              animation: "gold-aura-pulse 2.4s ease-in-out infinite 0.6s",
+              boxShadow: isOwner
+                ? "0 0 40px 14px hsla(0,75%,50%,0.12)"
+                : "0 0 30px 10px hsla(44,100%,52%,0.10)",
+              animation: isOwner ? "owner-aura-pulse 2.4s ease-in-out infinite 0.6s" : "gold-aura-pulse 2.4s ease-in-out infinite 0.6s",
               zIndex: 0,
             }}
           />
+
+          {/* Owner-only 3D orbit rings */}
+          {isOwner && (
+            <>
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  width: 140,
+                  height: 140,
+                  borderRadius: "50%",
+                  border: "1.5px solid hsla(0,80%,55%,0.3)",
+                  boxShadow: "0 0 8px hsla(315,80%,55%,0.2)",
+                  animation: "owner-orbit-1 6s linear infinite",
+                  zIndex: 0,
+                }}
+              >
+                <div style={{
+                  position: "absolute",
+                  top: -4,
+                  left: "50%",
+                  width: 8,
+                  height: 8,
+                  marginLeft: -4,
+                  borderRadius: "50%",
+                  background: "hsl(0,85%,60%)",
+                  boxShadow: "0 0 10px 3px hsla(0,85%,60%,0.7), 0 0 20px 6px hsla(315,80%,55%,0.3)",
+                }} />
+              </div>
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  width: 160,
+                  height: 160,
+                  borderRadius: "50%",
+                  border: "1px solid hsla(315,70%,55%,0.2)",
+                  animation: "owner-orbit-2 8s linear infinite",
+                  zIndex: 0,
+                }}
+              >
+                <div style={{
+                  position: "absolute",
+                  bottom: -3,
+                  left: "50%",
+                  width: 6,
+                  height: 6,
+                  marginLeft: -3,
+                  borderRadius: "50%",
+                  background: "hsl(315,90%,65%)",
+                  boxShadow: "0 0 8px 2px hsla(315,90%,65%,0.6)",
+                }} />
+              </div>
+            </>
+          )}
 
           {/* Avatar ring */}
           <div
@@ -363,10 +429,15 @@ const ProfilePage = () => {
               height: 90,
               borderRadius: "50%",
               padding: 3,
-              background: "linear-gradient(135deg, hsl(48,100%,72%) 0%, hsl(42,100%,52%) 35%, hsl(52,100%,78%) 55%, hsl(36,90%,40%) 80%, hsl(48,100%,68%) 100%)",
-              boxShadow:
-                "0 0 12px 3px hsla(44,100%,56%,0.55), 0 0 28px 6px hsla(44,100%,52%,0.28)",
-              animation: "avatar-ring-breathe 2.8s ease-in-out infinite",
+              background: isOwner
+                ? "linear-gradient(135deg, hsl(0,80%,55%) 0%, hsl(315,90%,50%) 35%, hsl(270,80%,55%) 55%, hsl(0,75%,45%) 80%, hsl(315,85%,55%) 100%)"
+                : "linear-gradient(135deg, hsl(48,100%,72%) 0%, hsl(42,100%,52%) 35%, hsl(52,100%,78%) 55%, hsl(36,90%,40%) 80%, hsl(48,100%,68%) 100%)",
+              boxShadow: isOwner
+                ? "0 0 16px 4px hsla(0,80%,55%,0.6), 0 0 36px 8px hsla(315,80%,50%,0.3)"
+                : "0 0 12px 3px hsla(44,100%,56%,0.55), 0 0 28px 6px hsla(44,100%,52%,0.28)",
+              animation: isOwner
+                ? "owner-avatar-3d 4s ease-in-out infinite, avatar-ring-breathe 2.8s ease-in-out infinite"
+                : "avatar-ring-breathe 2.8s ease-in-out infinite",
             }}
           >
             <div className="rounded-full overflow-hidden w-full h-full">
@@ -395,16 +466,22 @@ const ProfilePage = () => {
               )}
             </div>
           </div>
-          {/* Verified badge */}
+          {/* Verified/Owner badge */}
           <div
             className="absolute -bottom-1 -right-1 rounded-full p-1"
             style={{
-              background: "hsl(315,95%,45%)",
+              background: isOwner ? "hsl(0,80%,50%)" : "hsl(315,95%,45%)",
               border: "2px solid hsl(var(--background))",
-              boxShadow: "0 0 8px hsla(315,90%,55%,0.5)",
+              boxShadow: isOwner
+                ? "0 0 12px hsla(0,85%,55%,0.7), 0 0 24px hsla(315,80%,50%,0.3)"
+                : "0 0 8px hsla(315,90%,55%,0.5)",
             }}
           >
-            <ShieldCheck size={12} style={{ color: "#fff" }} />
+            {isOwner ? (
+              <span style={{ fontSize: 11, lineHeight: 1 }}>👑</span>
+            ) : (
+              <ShieldCheck size={12} style={{ color: "#fff" }} />
+            )}
           </div>
         </div>
 
@@ -415,13 +492,15 @@ const ProfilePage = () => {
             style={{
               fontFamily: "'Space Grotesk', sans-serif",
               letterSpacing: "-0.02em",
-              background: "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
-              backgroundSize: "200% auto",
+              background: isOwner
+                ? "linear-gradient(90deg, hsl(0,85%,60%) 0%, hsl(315,90%,65%) 25%, hsl(45,100%,70%) 50%, hsl(270,80%,65%) 75%, hsl(0,85%,60%) 100%)"
+                : "linear-gradient(90deg, hsl(42,100%,52%) 0%, hsl(52,100%,78%) 30%, hsl(45,100%,65%) 50%, hsl(36,90%,45%) 70%, hsl(48,100%,70%) 85%, hsl(42,100%,52%) 100%)",
+              backgroundSize: isOwner ? "300% auto" : "200% auto",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
-              animation: "gold-shimmer 2.8s linear infinite",
-              filter: "drop-shadow(0 0 10px hsla(44,100%,58%,0.55))",
+              animation: isOwner ? "owner-text-shimmer 2.5s linear infinite" : "gold-shimmer 2.8s linear infinite",
+              filter: isOwner ? "drop-shadow(0 0 12px hsla(0,80%,55%,0.65))" : "drop-shadow(0 0 10px hsla(44,100%,58%,0.55))",
             }}
           >
             {user.name}
@@ -431,9 +510,45 @@ const ProfilePage = () => {
           </p>
         </div>
 
-        {/* Admin + Plan badges */}
+        {/* Role + Plan badges */}
         <div className="flex items-center justify-center gap-2 flex-wrap">
-          {isAdmin && (
+          {isOwner && (
+            <div
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 relative overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, hsla(0,85%,45%,0.25), hsla(315,90%,45%,0.25), hsla(270,80%,45%,0.2))",
+                border: "1px solid hsla(0,80%,55%,0.5)",
+                boxShadow: "0 0 18px hsla(0,85%,55%,0.35), 0 0 40px hsla(315,80%,50%,0.15), inset 0 0 12px hsla(0,80%,60%,0.1)",
+                animation: "owner-badge-pulse 2s ease-in-out infinite",
+              }}
+            >
+              {/* Holographic sweep */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(105deg, transparent 30%, hsla(0,0%,100%,0.15) 45%, hsla(315,80%,70%,0.12) 50%, transparent 65%)",
+                  animation: "owner-holo-sweep 3s linear infinite",
+                }}
+              />
+              <span style={{ fontSize: 14, zIndex: 1 }}>👑</span>
+              <span
+                className="text-xs font-black uppercase tracking-wider relative z-10"
+                style={{
+                  background: "linear-gradient(90deg, hsl(0,85%,65%), hsl(315,90%,70%), hsl(45,100%,70%), hsl(0,85%,65%))",
+                  backgroundSize: "300% auto",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  animation: "owner-text-shimmer 2.5s linear infinite",
+                  filter: "drop-shadow(0 0 4px hsla(0,80%,60%,0.6))",
+                }}
+              >
+                Owner
+              </span>
+            </div>
+          )}
+          {isAdmin && !isOwner && (
             <div
               className="flex items-center gap-1.5 rounded-full px-3 py-1"
               style={{

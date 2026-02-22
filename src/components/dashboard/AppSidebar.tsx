@@ -235,7 +235,23 @@ const AppSidebar = ({ active, onNavigate, collapsed, onToggleCollapse }: AppSide
               >
                 0xAdam
               </p>
-              {isAdmin && (
+            {isOwner && (
+                <span
+                  className="text-[9px] font-black uppercase tracking-wider rounded-full px-1.5 py-0.5"
+                  style={{
+                    background: "linear-gradient(135deg, hsla(0,85%,50%,0.25), hsla(315,90%,50%,0.25))",
+                    border: "1px solid hsla(0,80%,55%,0.5)",
+                    boxShadow: "0 0 12px hsla(0,85%,55%,0.35), 0 0 24px hsla(315,80%,50%,0.15)",
+                    color: "hsl(0,85%,70%)",
+                    lineHeight: 1,
+                    whiteSpace: "nowrap",
+                    animation: "owner-badge-pulse 2s ease-in-out infinite",
+                  }}
+                >
+                  👑 Owner
+                </span>
+              )}
+              {isAdmin && !isOwner && (
                 <span
                   className="text-[9px] font-black uppercase tracking-wider rounded-full px-1.5 py-0.5"
                   style={{
