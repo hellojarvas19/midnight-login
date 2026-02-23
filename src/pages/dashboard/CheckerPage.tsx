@@ -1011,10 +1011,28 @@ const CheckerPage = () => {
               const cfg = STATUS_CONFIG[c.status];
               const isInvalid = !c.luhnValid;
               const staggerDelay = Math.min(i, 20) * 40;
+              const isDone = ["approved", "charged", "declined"].includes(c.status);
+
+              // Parse JSON response message to extract Price and Response
+              let parsedPrice: string | null = null;
+              let parsedResponse: string | null = null;
+              if (c.responseMessage) {
+                try {
+                  const json = JSON.parse(c.responseMessage);
+                  if (json.Price) parsedPrice = json.Price;
+                  if (json.Response) parsedResponse = json.Response;
+                } catch {
+                  // Not JSON, use as-is
+                  parsedResponse = c.responseMessage;
+                }
+              }
+
+              const statusColor = c.status === "declined" ? "hsl(0,75%,60%)" : c.status === "charged" ? "hsl(315,95%,65%)" : c.status === "approved" ? "hsl(142,70%,55%)" : "hsl(var(--muted-foreground))";
+
               return (
                 <div
                   key={i}
-                  className="flex items-center gap-3 px-5 py-3.5 transition-all duration-300"
+                  className="flex flex-col gap-2 px-5 py-3.5 transition-all duration-300"
                   style={{
                     background: isInvalid ? "hsla(0,60%,15%,0.35)" : c.status !== "pending" ? cfg.bg : "transparent",
                     borderLeft: isInvalid ? "3px solid hsla(0,75%,55%,0.7)" : c.status === "approved" ? "3px solid hsla(142,70%,50%,0.6)" : c.status === "charged" ? "3px solid hsla(315,90%,60%,0.6)" : "3px solid transparent",
@@ -1022,45 +1040,96 @@ const CheckerPage = () => {
                     borderColor: "hsla(315,20%,15%,0.3)",
                   }}
                 >
-                  {/* Status icon */}
-                  <div
-                    className="shrink-0 rounded-lg p-1.5"
-                    style={{
-                      background: isInvalid ? "hsla(0,65%,20%,0.3)" : c.status === "pending" ? "hsla(315,30%,15%,0.3)" : cfg.bg,
-                    }}
-                  >
-                    {isInvalid        && <XCircle    size={14} style={{ color: "hsl(0,75%,60%)",    filter: "drop-shadow(0 0 4px hsla(0,75%,55%,0.5))" }} />}
-                    {!isInvalid && c.status === "checking"  && <Loader2    size={14} className="animate-spin" style={{ color: "hsl(315,95%,65%)" }} />}
-                    {!isInvalid && c.status === "approved"  && <CheckCircle2 size={14} style={{ color: "hsl(142,70%,55%)", filter: "drop-shadow(0 0 4px hsla(142,70%,55%,0.6))" }} />}
-                    {!isInvalid && c.status === "charged"   && <CreditCard  size={14} style={{ color: "hsl(315,95%,65%)", filter: "drop-shadow(0 0 4px hsla(315,90%,60%,0.6))" }} />}
-                    {!isInvalid && c.status === "declined"  && <XCircle    size={14} style={{ color: "hsl(0,75%,60%)",    filter: "drop-shadow(0 0 4px hsla(0,75%,55%,0.6))" }} />}
-                    {!isInvalid && c.status === "pending"   && <div className="w-3.5 h-3.5 rounded-full" style={{ background: "hsla(315,30%,30%,0.4)", border: "1px solid hsla(315,30%,40%,0.3)" }} />}
+                  {/* Top row: icon + card + badge */}
+                  <div className="flex items-center gap-3">
+                    {/* Status icon */}
+                    <div
+                      className="shrink-0 rounded-lg p-1.5"
+                      style={{
+                        background: isInvalid ? "hsla(0,65%,20%,0.3)" : c.status === "pending" ? "hsla(315,30%,15%,0.3)" : cfg.bg,
+                      }}
+                    >
+                      {isInvalid        && <XCircle    size={14} style={{ color: "hsl(0,75%,60%)",    filter: "drop-shadow(0 0 4px hsla(0,75%,55%,0.5))" }} />}
+                      {!isInvalid && c.status === "checking"  && <Loader2    size={14} className="animate-spin" style={{ color: "hsl(315,95%,65%)" }} />}
+                      {!isInvalid && c.status === "approved"  && <CheckCircle2 size={14} style={{ color: "hsl(142,70%,55%)", filter: "drop-shadow(0 0 4px hsla(142,70%,55%,0.6))" }} />}
+                      {!isInvalid && c.status === "charged"   && <CreditCard  size={14} style={{ color: "hsl(315,95%,65%)", filter: "drop-shadow(0 0 4px hsla(315,90%,60%,0.6))" }} />}
+                      {!isInvalid && c.status === "declined"  && <XCircle    size={14} style={{ color: "hsl(0,75%,60%)",    filter: "drop-shadow(0 0 4px hsla(0,75%,55%,0.6))" }} />}
+                      {!isInvalid && c.status === "pending"   && <div className="w-3.5 h-3.5 rounded-full" style={{ background: "hsla(315,30%,30%,0.4)", border: "1px solid hsla(315,30%,40%,0.3)" }} />}
+                    </div>
+
+                    {/* Card info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-mono font-medium truncate" style={{ color: isInvalid ? "hsl(0,75%,65%)" : "hsl(var(--foreground))" }}>
+                        {maskCard(c.card)}
+                      </p>
+                      <p className="text-xs font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
+                        {c.expiry && <>{c.expiry} · {c.cvv ? "CVV ✓" : "No CVV"}</>}
+                      </p>
+                    </div>
+
+                    {/* Status badge */}
+                    <span
+                      className="shrink-0 text-xs font-black uppercase px-2.5 py-1 rounded-full"
+                      style={{
+                        color: isInvalid ? "hsl(0,75%,65%)" : cfg.color,
+                        background: isInvalid ? "hsla(0,65%,20%,0.4)" : cfg.bg,
+                        border: `1px solid ${isInvalid ? "hsla(0,75%,55%,0.4)" : `${cfg.color}44`}`,
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      {isInvalid ? "Invalid" : cfg.label}
+                    </span>
                   </div>
 
-                  {/* Card info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono font-medium truncate" style={{ color: isInvalid ? "hsl(0,75%,65%)" : "hsl(var(--foreground))" }}>
-                      {maskCard(c.card)}
-                    </p>
-                    <p className="text-xs font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
-                      {c.expiry && <>{c.expiry} · {c.cvv ? "CVV ✓" : "No CVV"}</>}
-                      {c.responseCode && <> · <span style={{ color: c.status === "declined" ? "hsl(0,75%,65%)" : c.status === "charged" ? "hsl(315,95%,70%)" : "hsl(142,70%,55%)" }}>{c.responseCode}</span></>}
-                      {c.responseMessage && <> · <span className="opacity-80" style={{ color: c.status === "declined" ? "hsl(0,65%,60%)" : c.status === "charged" ? "hsl(315,85%,65%)" : "hsl(142,60%,50%)" }}>{c.responseMessage}</span></>}
-                    </p>
-                  </div>
+                  {/* Response row — styled 3D card */}
+                  {isDone && !isInvalid && (parsedPrice || parsedResponse) && (
+                    <div
+                      className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 ml-8"
+                      style={{
+                        background: `linear-gradient(135deg, ${c.status === "declined" ? "hsla(0,50%,12%,0.6)" : c.status === "charged" ? "hsla(315,50%,15%,0.5)" : "hsla(142,50%,12%,0.5)"}, ${c.status === "declined" ? "hsla(0,40%,8%,0.7)" : c.status === "charged" ? "hsla(315,40%,10%,0.6)" : "hsla(142,40%,8%,0.6)"})`,
+                        border: `1px solid ${c.status === "declined" ? "hsla(0,60%,35%,0.35)" : c.status === "charged" ? "hsla(315,60%,45%,0.35)" : "hsla(142,55%,40%,0.35)"}`,
+                        boxShadow: `0 4px 16px ${c.status === "declined" ? "hsla(0,60%,20%,0.3)" : c.status === "charged" ? "hsla(315,60%,30%,0.3)" : "hsla(142,55%,25%,0.3)"}, inset 0 1px 0 ${c.status === "declined" ? "hsla(0,50%,50%,0.1)" : c.status === "charged" ? "hsla(315,50%,60%,0.1)" : "hsla(142,50%,55%,0.1)"}`,
+                        transform: "perspective(600px) rotateX(1deg)",
+                        animation: `card-entrance 0.5s cubic-bezier(0.34,1.56,0.64,1) ${staggerDelay + 200}ms both`,
+                      }}
+                    >
+                      {/* Amount */}
+                      {parsedPrice && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+                            Amount
+                          </span>
+                          <span
+                            className="text-sm font-black tabular-nums"
+                            style={{
+                              fontFamily: "'Space Grotesk', sans-serif",
+                              color: statusColor,
+                              textShadow: `0 0 10px ${statusColor}55`,
+                            }}
+                          >
+                            ${parsedPrice}
+                          </span>
+                        </div>
+                      )}
 
-                  {/* Status badge */}
-                  <span
-                    className="shrink-0 text-xs font-black uppercase px-2.5 py-1 rounded-full"
-                    style={{
-                      color: isInvalid ? "hsl(0,75%,65%)" : cfg.color,
-                      background: isInvalid ? "hsla(0,65%,20%,0.4)" : cfg.bg,
-                      border: `1px solid ${isInvalid ? "hsla(0,75%,55%,0.4)" : `${cfg.color}44`}`,
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    {isInvalid ? "Invalid" : cfg.label}
-                  </span>
+                      {parsedPrice && parsedResponse && (
+                        <span style={{ color: "hsl(var(--muted-foreground))", opacity: 0.4 }}>—</span>
+                      )}
+
+                      {/* Response code */}
+                      {parsedResponse && (
+                        <span
+                          className="text-xs font-bold uppercase tracking-wide"
+                          style={{
+                            color: statusColor,
+                            textShadow: `0 0 8px ${statusColor}44`,
+                          }}
+                        >
+                          {parsedResponse}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
