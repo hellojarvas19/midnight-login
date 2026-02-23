@@ -200,7 +200,17 @@ const CheckerPage = () => {
   const [pasteText, setPasteText] = useState(() => saved.pasteText || "");
   const [cards, setCards] = useState<CardResult[]>(() => {
     try {
-      if (saved.pasteText) return parseLines(saved.pasteText);
+      if (saved.pasteText) {
+        return saved.pasteText
+          .split("\n")
+          .map((l: string) => l.trim())
+          .filter((l: string) => l.length > 8)
+          .slice(0, 500)
+          .map((l: string) => {
+            const { card, expiry, cvv } = parseCardLine(l);
+            return { raw: l, card, expiry, cvv, luhnValid: luhnCheck(card), status: "pending" as const };
+          });
+      }
     } catch {}
     return [];
   });
