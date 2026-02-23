@@ -515,7 +515,6 @@ const CheckerPage = () => {
 
     const jobId = jobData.id;
     setCurrentJobId(jobId);
-    pollResults(jobId);
 
     // Insert card results
     const resultRows = cardsPayload.map((c) => ({
@@ -529,15 +528,55 @@ const CheckerPage = () => {
 
     await supabase.from("check_results").insert(resultRows);
 
-    // Call edge function (sites fetched from DB by the function)
-    const { error: fnErr } = await supabase.functions.invoke("checker-run", {
-      body: { job_id: jobId, cards: cardsPayload, proxies },
-    });
+    // Update job to running
+    await supabase.from("check_jobs").update({ status: "running" }).eq("id", jobId);
 
-    if (fnErr) {
-      console.error("Edge function error:", fnErr);
-      // Job is still running on backend, don't stop
-    }
+    // Drive the loop from the client — one card at a time
+    const processCards = async () => {
+      for (let i = 0; i < cardsPayload.length; i++) {
+        if (abortRef.current) break;
+
+        // Check if job was stopped
+        const { data: jc } = await supabase.from("check_jobs").select("status").eq("id", jobId).single();
+        if (jc?.status === "stopped") break;
+
+        const c = cardsPayload[i];
+        const proxy = proxies[i % proxies.length];
+
+        // Update UI to checking
+        setCards(prev => prev.map(card =>
+          card.card === c.card && card.expiry === c.expiry && card.cvv === c.cvv
+            ? { ...card, status: "checking" as const }
+            : card
+        ));
+
+        try {
+          const { data, error } = await supabase.functions.invoke("checker-run", {
+            body: { job_id: jobId, card: c, proxy },
+          });
+
+          if (data?.result) {
+            setCards(prev => prev.map(card =>
+              card.card === c.card && card.expiry === c.expiry && card.cvv === c.cvv
+                ? { ...card, status: data.result.status as CardResult["status"], responseCode: data.result.code, responseMessage: data.result.message }
+                : card
+            ));
+          }
+
+          if (data?.status === "stopped") break;
+        } catch (err) {
+          console.error(`Card ${i + 1} error:`, err);
+        }
+
+        // Small delay between cards
+        await new Promise(r => setTimeout(r, 300));
+      }
+
+      setIsRunning(false);
+      refreshProfile();
+    };
+
+    processCards();
   };
 
   const handleStop = async () => {
