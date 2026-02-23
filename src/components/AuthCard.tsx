@@ -14,6 +14,7 @@ const AuthCard = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [widgetLoaded, setWidgetLoaded] = useState(false);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const card = cardRef.current;
@@ -56,9 +57,10 @@ const AuthCard = () => {
       }
     };
 
-    // Inject Telegram Login Widget script
+    // Inject Telegram Login Widget script with loading state
     const container = document.getElementById("telegram-login-container");
     if (container && container.childElementCount === 0) {
+      setWidgetLoaded(false);
       const script = document.createElement("script");
       script.src = "https://telegram.org/js/telegram-widget.js?22";
       script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
@@ -67,7 +69,14 @@ const AuthCard = () => {
       script.setAttribute("data-onauth", "onTelegramAuth(user)");
       script.setAttribute("data-request-access", "write");
       script.async = true;
+      
+      // Set widget as loaded when script loads
+      script.onload = () => setWidgetLoaded(true);
+      script.onerror = () => setWidgetLoaded(true); // Show button even on error
+      
       container.appendChild(script);
+    } else {
+      setWidgetLoaded(true);
     }
 
     return () => {
@@ -98,17 +107,19 @@ const AuthCard = () => {
       {error && <p className="text-xs text-center mb-4" style={{ color: "hsl(0,75%,60%)" }}>{error}</p>}
 
       {/* Loading state */}
-      {loading && (
+      {(loading || !widgetLoaded) && (
         <div className="flex items-center justify-center gap-2 mb-4">
           <Loader2 size={16} className="animate-spin" style={{ color: "hsl(var(--primary))" }} />
-          <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>Authenticating...</span>
+          <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+            {loading ? "Authenticating..." : "Loading login..."}
+          </span>
         </div>
       )}
 
       {/* Telegram Login Widget Container — the only login button */}
       <div
         id="telegram-login-container"
-        className="flex justify-center mb-4 rounded-xl p-3"
+        className={`flex justify-center mb-4 rounded-xl p-3 ${!widgetLoaded ? 'invisible' : ''}`}
         style={{
           background: "hsla(200, 80%, 50%, 0.08)",
           border: "1px solid hsla(200, 70%, 55%, 0.18)",
