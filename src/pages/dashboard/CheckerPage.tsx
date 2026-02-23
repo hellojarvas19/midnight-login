@@ -260,20 +260,107 @@ const CheckerPage = () => {
   // Cleanup polling on unmount
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
+  // ── Resume processing helper (used on restore & initial run) ──
+  const resumeProcessing = useCallback(async (jobId: string, allCards: { card: string; expiry: string; cvv: string }[], userProxies: string[]) => {
+    abortRef.current = false;
+    setIsRunning(true);
+
+    for (let i = 0; i < allCards.length; i++) {
+      if (abortRef.current) break;
+
+      const { data: jc } = await supabase.from("check_jobs").select("status").eq("id", jobId).single();
+      if (jc?.status === "stopped" || jc?.status === "completed" || jc?.status === "failed") break;
+
+      const c = allCards[i];
+      const proxy = userProxies[i % userProxies.length] || "none";
+
+      setCards(prev => prev.map(card =>
+        card.card === c.card && card.expiry === c.expiry && card.cvv === c.cvv
+          ? { ...card, status: "checking" as const }
+          : card
+      ));
+
+      let success = false;
+      for (let attempt = 0; attempt < 3 && !success; attempt++) {
+        if (abortRef.current) break;
+        try {
+          const { data, error } = await supabase.functions.invoke("checker-run", {
+            body: { job_id: jobId, card: c, proxy },
+          });
+
+          if (error) {
+            console.error(`Card ${i + 1} attempt ${attempt + 1} error:`, error);
+            if (attempt < 2) { await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); continue; }
+          }
+
+          if (data?.result) {
+            setCards(prev => prev.map(card =>
+              card.card === c.card && card.expiry === c.expiry && card.cvv === c.cvv
+                ? { ...card, status: data.result.status as CardResult["status"], responseCode: data.result.code, responseMessage: data.result.message }
+                : card
+            ));
+            success = true;
+          }
+
+          if (data?.status === "stopped") { abortRef.current = true; break; }
+          if (!data?.result && !error) { success = true; } // no result but no error = move on
+        } catch (err) {
+          console.error(`Card ${i + 1} attempt ${attempt + 1} fetch error:`, err);
+          if (attempt < 2) { await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); }
+        }
+      }
+
+      if (!success && !abortRef.current) {
+        // Mark card as declined after all retries failed
+        setCards(prev => prev.map(card =>
+          card.card === c.card && card.expiry === c.expiry && card.cvv === c.cvv
+            ? { ...card, status: "declined" as const, responseCode: "TIMEOUT", responseMessage: "Failed after 3 retries" }
+            : card
+        ));
+      }
+
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    setIsRunning(false);
+    refreshProfile();
+  }, [refreshProfile]);
+
   // ── Restore running job on mount ──
   useEffect(() => {
     if (!saved.currentJobId || !authUser) return;
     const jobId = saved.currentJobId;
-    supabase.from("check_jobs").select("*").eq("id", jobId).single().then(({ data }) => {
-      if (!data) return;
-      if (data.status === "running") {
-        setIsRunning(true);
-        pollResults(jobId);
-      } else if (["completed", "failed", "stopped"].includes(data.status)) {
-        pollResults(jobId); // fetch final results once
+    supabase.from("check_jobs").select("*").eq("id", jobId).single().then(async ({ data: job }) => {
+      if (!job) return;
+
+      // Fetch existing results to restore card statuses
+      const { data: results } = await supabase.from("check_results").select("*").eq("job_id", jobId);
+      if (results) {
+        setCards(prev => prev.map(c => {
+          const match = results.find((r: any) => r.card_number === c.card && r.expiry === c.expiry && r.cvv === c.cvv);
+          if (match && match.status !== "pending" && match.status !== "checking") {
+            return { ...c, status: match.status as CardResult["status"], responseCode: match.response_code || undefined, responseMessage: match.response_message || undefined };
+          }
+          return c;
+        }));
+      }
+
+      if (job.status === "running") {
+        // Find cards still pending/checking and resume processing them
+        const pendingCards = (results || [])
+          .filter((r: any) => r.status === "pending" || r.status === "checking")
+          .map((r: any) => ({ card: r.card_number, expiry: r.expiry, cvv: r.cvv }));
+
+        if (pendingCards.length > 0) {
+          const savedProxies = saved.proxies || [];
+          resumeProcessing(jobId, pendingCards, savedProxies);
+        } else {
+          // All cards processed, mark as complete
+          await supabase.from("check_jobs").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", jobId);
+        }
       }
     });
-  }, [authUser, pollResults]);
+  }, [authUser, resumeProcessing]);
 
    // Sites are now managed by owners — fetch count for display
   const [sitesCount, setSitesCount] = useState(0);
@@ -531,52 +618,8 @@ const CheckerPage = () => {
     // Update job to running
     await supabase.from("check_jobs").update({ status: "running" }).eq("id", jobId);
 
-    // Drive the loop from the client — one card at a time
-    const processCards = async () => {
-      for (let i = 0; i < cardsPayload.length; i++) {
-        if (abortRef.current) break;
-
-        // Check if job was stopped
-        const { data: jc } = await supabase.from("check_jobs").select("status").eq("id", jobId).single();
-        if (jc?.status === "stopped") break;
-
-        const c = cardsPayload[i];
-        const proxy = proxies[i % proxies.length];
-
-        // Update UI to checking
-        setCards(prev => prev.map(card =>
-          card.card === c.card && card.expiry === c.expiry && card.cvv === c.cvv
-            ? { ...card, status: "checking" as const }
-            : card
-        ));
-
-        try {
-          const { data, error } = await supabase.functions.invoke("checker-run", {
-            body: { job_id: jobId, card: c, proxy },
-          });
-
-          if (data?.result) {
-            setCards(prev => prev.map(card =>
-              card.card === c.card && card.expiry === c.expiry && card.cvv === c.cvv
-                ? { ...card, status: data.result.status as CardResult["status"], responseCode: data.result.code, responseMessage: data.result.message }
-                : card
-            ));
-          }
-
-          if (data?.status === "stopped") break;
-        } catch (err) {
-          console.error(`Card ${i + 1} error:`, err);
-        }
-
-        // Small delay between cards
-        await new Promise(r => setTimeout(r, 300));
-      }
-
-      setIsRunning(false);
-      refreshProfile();
-    };
-
-    processCards();
+    // Drive the loop from the client — one card at a time with retries
+    resumeProcessing(jobId, cardsPayload, proxies);
   };
 
   const handleStop = async () => {
