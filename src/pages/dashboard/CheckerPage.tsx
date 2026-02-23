@@ -1045,6 +1045,7 @@ const CheckerPage = () => {
                     <p className="text-xs font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {c.expiry && <>{c.expiry} · {c.cvv ? "CVV ✓" : "No CVV"}</>}
                       {c.responseCode && <> · <span style={{ color: c.status === "declined" ? "hsl(0,75%,65%)" : c.status === "charged" ? "hsl(315,95%,70%)" : "hsl(142,70%,55%)" }}>{c.responseCode}</span></>}
+                      {c.responseMessage && <> · <span className="opacity-80" style={{ color: c.status === "declined" ? "hsl(0,65%,60%)" : c.status === "charged" ? "hsl(315,85%,65%)" : "hsl(142,60%,50%)" }}>{c.responseMessage}</span></>}
                     </p>
                   </div>
 

