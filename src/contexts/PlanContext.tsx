@@ -22,7 +22,7 @@ export const PLAN_DETAILS: Record<PlanId, PlanDetails> = {
     priceUsd: 10,
     duration: 7,
     dailyLimit: 5000,
-    features: ["5,000 credits/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
+    features: ["35,000 total credits", "5,000 credits/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
   },
   standard: {
     id: "standard",
@@ -30,8 +30,8 @@ export const PLAN_DETAILS: Record<PlanId, PlanDetails> = {
     price: "$20",
     priceUsd: 20,
     duration: 15,
-    dailyLimit: 10000,
-    features: ["10,000 credits/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
+    dailyLimit: 5000,
+    features: ["75,000 total credits", "5,000 credits/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
   },
   pro: {
     id: "pro",
@@ -39,8 +39,8 @@ export const PLAN_DETAILS: Record<PlanId, PlanDetails> = {
     price: "$40",
     priceUsd: 40,
     duration: 30,
-    dailyLimit: 20000,
-    features: ["20,000 credits/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
+    dailyLimit: 5000,
+    features: ["150,000 total credits", "5,000 credits/day", "All gateways", "Priority support", "Mass checker", "Multi-proxy rotation", "API access", "Community chat"],
   },
 };
 

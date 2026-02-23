@@ -166,15 +166,26 @@ Deno.serve(async (req) => {
 
           if (creditsErr) throw creditsErr;
         } else {
-          // Plan purchase: activate the plan
+          // Plan purchase: activate the plan AND grant credits
           const planDurations: Record<string, number> = { basic: 7, standard: 15, pro: 30 };
+          const planCredits: Record<string, number> = { basic: 35000, standard: 75000, pro: 150000 };
           const days = planDurations[payment.plan] || 7;
+          const credits = planCredits[payment.plan] || 0;
           const expiresAt = new Date();
           expiresAt.setDate(expiresAt.getDate() + days);
 
+          // Get current credits to add on top
+          const { data: currentProfile } = await adminClient
+            .from("profiles")
+            .select("credits")
+            .eq("id", payment.user_id)
+            .single();
+
+          const newCredits = (currentProfile?.credits || 0) + credits;
+
           const { error: profileErr } = await adminClient
             .from("profiles")
-            .update({ plan: payment.plan, plan_expires_at: expiresAt.toISOString() })
+            .update({ plan: payment.plan, plan_expires_at: expiresAt.toISOString(), credits: newCredits })
             .eq("id", payment.user_id);
 
           if (profileErr) throw profileErr;
@@ -192,7 +203,9 @@ Deno.serve(async (req) => {
         const emoji = decision === "approve" ? "✅" : "❌";
         const statusText = decision === "approve" ? "Approved" : "Rejected";
         const extra = decision === "approve"
-          ? `\n\nYour <b>${payment.plan}</b> plan is now active! 🎉`
+          ? (payment.payment_type === "credits"
+            ? `\n\n💳 <b>${payment.credits_amount?.toLocaleString()}</b> credits added to your account! 🎉`
+            : `\n\nYour <b>${payment.plan}</b> plan is now active with <b>${(planCredits[payment.plan] || 0).toLocaleString()}</b> credits! 🎉`)
           : `\n\nPlease contact support if you believe this is an error.`;
 
         const userMsg = `${emoji} <b>Payment ${statusText}</b>\n\n` +
