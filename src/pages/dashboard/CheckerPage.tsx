@@ -176,21 +176,77 @@ const CheckerPage = () => {
     return () => clearInterval(t);
   }, []);
 
-  const [gateway, setGateway] = useState("");
+  // ── Session persistence helpers ──
+  const STORAGE_KEY = "checker_session";
+  const saveSession = useCallback((data: Record<string, any>) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...existing, ...data }));
+    } catch {}
+  }, []);
+  const loadSession = useCallback(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
+  }, []);
+  const clearSession = useCallback(() => { localStorage.removeItem(STORAGE_KEY); }, []);
+
+  const saved = useRef(loadSession());
+
+  const [gateway, setGateway] = useState(saved.current.gateway || "");
   const [inputMode, setInputMode] = useState<"paste" | "file">("paste");
-  const [pasteText, setPasteText] = useState("");
-  const [cards, setCards] = useState<CardResult[]>([]);
+  const [pasteText, setPasteText] = useState(saved.current.pasteText || "");
+  const [cards, setCards] = useState<CardResult[]>(() => {
+    if (saved.current.pasteText) return parseLines(saved.current.pasteText);
+    return [];
+  });
   const [isRunning, setIsRunning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const [proxyOpen, setProxyOpen] = useState(false);
   const [proxyInput, setProxyInput] = useState("");
-  const [proxies, setProxies] = useState<string[]>([]);
-  const [proxyEnabled, setProxyEnabled] = useState(false);
+  const [proxies, setProxies] = useState<string[]>(saved.current.proxies || []);
+  const [proxyEnabled, setProxyEnabled] = useState((saved.current.proxies?.length ?? 0) > 0);
   const proxyIndexRef = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<boolean>(false);
-  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(saved.current.currentJobId || null);
+
+  // ── Persist session on state changes ──
+  useEffect(() => { saveSession({ gateway }); }, [gateway]);
+  useEffect(() => { saveSession({ pasteText }); }, [pasteText]);
+  useEffect(() => { saveSession({ proxies }); }, [proxies]);
+  useEffect(() => { saveSession({ currentJobId }); }, [currentJobId]);
+
+  // ── Restore running job on mount ──
+  useEffect(() => {
+    if (!saved.current.currentJobId || !authUser) return;
+    const jobId = saved.current.currentJobId;
+    supabase.from("check_jobs").select("*").eq("id", jobId).single().then(({ data }) => {
+      if (data && data.status === "running") {
+        setIsRunning(true);
+        // Restore card statuses from DB
+        supabase.from("check_results").select("*").eq("job_id", jobId).then(({ data: results }) => {
+          if (results) {
+            setCards(prev => prev.map(c => {
+              const match = results.find((r: any) => r.card_number === c.card && r.expiry === c.expiry && r.cvv === c.cvv);
+              if (match) return { ...c, status: match.status as CardResult["status"], responseCode: match.response_code || undefined, responseMessage: match.response_message || undefined };
+              return c;
+            }));
+          }
+        });
+      } else if (data && ["completed", "failed", "stopped"].includes(data.status)) {
+        // Restore final results
+        supabase.from("check_results").select("*").eq("job_id", jobId).then(({ data: results }) => {
+          if (results) {
+            setCards(prev => prev.map(c => {
+              const match = results.find((r: any) => r.card_number === c.card && r.expiry === c.expiry && r.cvv === c.cvv);
+              if (match) return { ...c, status: match.status as CardResult["status"], responseCode: match.response_code || undefined, responseMessage: match.response_message || undefined };
+              return c;
+            }));
+          }
+        });
+      }
+    });
+  }, [authUser]);
 
    // Sites are now managed by owners — fetch count for display
   const [sitesCount, setSitesCount] = useState(0);
@@ -468,6 +524,7 @@ const CheckerPage = () => {
     setCards([]);
     setPasteText("");
     setCurrentJobId(null);
+    clearSession();
   };
 
   const invalidCount = cards.filter((c) => !c.luhnValid).length;
