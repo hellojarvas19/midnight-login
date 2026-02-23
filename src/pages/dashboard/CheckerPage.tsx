@@ -232,31 +232,48 @@ const CheckerPage = () => {
   useEffect(() => { saveSession({ proxies }); }, [proxies]);
   useEffect(() => { saveSession({ currentJobId }); }, [currentJobId]);
 
+  // ── Poll results for running job ──
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const pollResults = useCallback((jobId: string) => {
+    const fetchResults = async () => {
+      const [{ data: job }, { data: results }] = await Promise.all([
+        supabase.from("check_jobs").select("*").eq("id", jobId).single(),
+        supabase.from("check_results").select("*").eq("job_id", jobId),
+      ]);
+      if (results) {
+        setCards(prev => prev.map(c => {
+          const match = results.find((r: any) => r.card_number === c.card && r.expiry === c.expiry && r.cvv === c.cvv);
+          if (match) return { ...c, status: match.status as CardResult["status"], responseCode: match.response_code || undefined, responseMessage: match.response_message || undefined };
+          return c;
+        }));
+      }
+      if (job && ["completed", "failed", "stopped"].includes(job.status)) {
+        setIsRunning(false);
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      }
+    };
+    fetchResults();
+    pollRef.current = setInterval(fetchResults, 3000);
+  }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
   // ── Restore running job on mount ──
   useEffect(() => {
     if (!saved.currentJobId || !authUser) return;
     const jobId = saved.currentJobId;
     supabase.from("check_jobs").select("*").eq("id", jobId).single().then(({ data }) => {
       if (!data) return;
-      const restoreResults = () => {
-        supabase.from("check_results").select("*").eq("job_id", jobId).then(({ data: results }) => {
-          if (results) {
-            setCards(prev => prev.map(c => {
-              const match = results.find((r: any) => r.card_number === c.card && r.expiry === c.expiry && r.cvv === c.cvv);
-              if (match) return { ...c, status: match.status as CardResult["status"], responseCode: match.response_code || undefined, responseMessage: match.response_message || undefined };
-              return c;
-            }));
-          }
-        });
-      };
       if (data.status === "running") {
         setIsRunning(true);
-        restoreResults();
+        pollResults(jobId);
       } else if (["completed", "failed", "stopped"].includes(data.status)) {
-        restoreResults();
+        pollResults(jobId); // fetch final results once
       }
     });
-  }, [authUser]);
+  }, [authUser, pollResults]);
 
    // Sites are now managed by owners — fetch count for display
   const [sitesCount, setSitesCount] = useState(0);
@@ -498,6 +515,7 @@ const CheckerPage = () => {
 
     const jobId = jobData.id;
     setCurrentJobId(jobId);
+    pollResults(jobId);
 
     // Insert card results
     const resultRows = cardsPayload.map((c) => ({
@@ -528,9 +546,11 @@ const CheckerPage = () => {
     }
     abortRef.current = true;
     setIsRunning(false);
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
   };
 
   const handleClear = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     setCards([]);
     setPasteText("");
     setCurrentJobId(null);
