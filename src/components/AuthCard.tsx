@@ -129,7 +129,7 @@ const AuthCard = () => {
 
       {/* Footer note */}
       <p className="text-center text-xs mt-5" style={{ color: "hsl(var(--muted-foreground))" }}>
-        Secure authentication powered by Lovable Cloud
+        Secure authentication powered by 0xAdam
       </p>
     </div>
   );
