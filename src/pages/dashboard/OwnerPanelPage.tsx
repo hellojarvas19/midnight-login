@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Check, X, Clock, RefreshCw, Shield, User, Hash, Wallet,
   Crown, ShieldAlert, Ban, UserPlus, UserMinus, Coins, ChevronDown,
-  ChevronUp, Settings2, Zap, Star, Globe, Plus, Trash2,
+  ChevronUp, Settings2, Zap, Star, Globe, Plus, Trash2, Upload, FileText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -452,6 +452,7 @@ const OwnerPanelPage = () => {
   const [sitesList, setSitesList] = useState<{ id: string; url: string; created_at: string }[]>([]);
   const [newSiteUrl, setNewSiteUrl] = useState("");
   const [sitesLoading, setSitesLoading] = useState(false);
+  const siteFileRef = useRef<HTMLInputElement>(null);
 
   const fetchSites = useCallback(async () => {
     setSitesLoading(true);
@@ -489,6 +490,28 @@ const OwnerPanelPage = () => {
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
+  };
+
+  const addSitesFromFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      const urls = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0 && l.startsWith("http"));
+      if (urls.length === 0) {
+        toast({ title: "No valid URLs found", description: "Each line should be a URL starting with http", variant: "destructive" });
+        return;
+      }
+      const rows = urls.map((url) => ({ url, added_by: user!.id }));
+      try {
+        const { error } = await supabase.from("shopify_sites").insert(rows);
+        if (error) throw error;
+        toast({ title: `${urls.length} site${urls.length !== 1 ? "s" : ""} added` });
+        fetchSites();
+      } catch (err: any) {
+        toast({ title: "Error", description: err.message, variant: "destructive" });
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Check identity
@@ -724,7 +747,34 @@ const OwnerPanelPage = () => {
             >
               <Plus size={14} /> Add
             </button>
+            <button
+              type="button"
+              onClick={() => siteFileRef.current?.click()}
+              className="rounded-xl px-4 py-2.5 text-sm font-bold flex items-center gap-1.5 transition-all"
+              style={{
+                background: "hsla(44,80%,40%,0.15)",
+                border: "1px solid hsla(44,80%,55%,0.3)",
+                color: "hsl(48,100%,68%)",
+              }}
+            >
+              <Upload size={14} /> .txt
+            </button>
+            <input
+              ref={siteFileRef}
+              type="file"
+              accept=".txt"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) addSitesFromFile(file);
+                e.target.value = "";
+              }}
+            />
           </div>
+
+          <p className="text-[10px]" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.7 }}>
+            Add sites one by one or upload a .txt file (one URL per line). Checker rotates: 1 site = 10 cards.
+          </p>
 
           {sitesLoading ? (
             <div className="flex justify-center py-12">
